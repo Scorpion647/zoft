@@ -52,14 +52,14 @@ DO $$
     --materials
     _material_code             VARCHAR(50);
     _subheading                VARCHAR(10);
-    _type                      Logic.Material_Type;
+    _type                      public.Material_Type;
     _material_measurement_unit VARCHAR(50);
     _material_codes            TEXT[];
 
     --record
     _record_item               INTEGER;
     _unit_price                INTEGER;
-    _currency                  Logic.Currency;
+    _currency                  public.Currency;
     _record_quantity           INTEGER;
     _purchase_orders           TEXT[];
     _purchase_order            TEXT;
@@ -125,7 +125,7 @@ DO $$
             _type := 'foreign';
             _material_measurement_unit := 'TON';
         END IF;
-        INSERT INTO Logic.Material (Code, Subheading, Type, Measurement_Unit)
+        INSERT INTO public.Material (Code, Subheading, Type, Measurement_Unit)
         VALUES (_material_code, _subheading, _type, _material_measurement_unit);
         _material_codes := ARRAY_APPEND( _material_codes, _material_code );
       END LOOP;
@@ -137,14 +137,14 @@ DO $$
         _record_quantity := ( ( FLOOR( RANDOM( ) * 100 + 1 )::INTEGER ) );
         _currency := 'COP';
         _purchase_order := (SELECT SUBSTRING( MD5( RANDOM( )::TEXT ), 1, 10));
-        _record_item := (SELECT COUNT( * ) FROM Logic.Record WHERE Purchase_Order = _purchase_order) + 1;
+        _record_item := (SELECT COUNT( * ) FROM public.Record WHERE Purchase_Order = _purchase_order) + 1;
 
         IF MOD( i, 3 ) = 0
           THEN
             _currency := 'USD';
         END IF;
 
-        INSERT INTO Logic.Record (Item, Quantity, Material_Code, Purchase_Order, Measurement_Unit, Unit_Price,
+        INSERT INTO public.Record (Item, Quantity, Material_Code, Purchase_Order, Measurement_Unit, Unit_Price,
                                   Currency, Supplier_Id)
         VALUES (_record_item, _record_quantity,
                 _material_codes[(SELECT FLOOR( RANDOM( ) * ( ARRAY_LENGTH( _material_codes, 1 ) ) + 1 )::INT)],
@@ -157,9 +157,9 @@ DO $$
     --LOOP FOR RECORD INFO
     FOR i IN 1..50
       LOOP
-        INSERT INTO Logic.Record_Info (Record_Id, Bill_Number, Trm, Billed_Quantity, Billed_Unit_Price,
+        INSERT INTO public.Record_Info (Record_Id, Bill_Number, Trm, Billed_Quantity, Billed_Unit_Price,
                                        Billed_Total_Price, Gross_Weight, Packages, Status, Created_At, Created_By,
-                                       Modified_At)
+                                       Modified_At, conversion)
         VALUES (_records_id[(SELECT FLOOR( RANDOM( ) * ( ARRAY_LENGTH( _records_id, 1 ) ) + 1 )::INT)],
                 'PO' || i,
                 ( FLOOR( ( RANDOM( ) * 100000 + 1 ) )::BIGINT ),
@@ -171,6 +171,6 @@ DO $$
                 'pending',
                 NOW( ),
                 _users_id[(SELECT FLOOR( RANDOM( ) * ( ARRAY_LENGTH( _users_id, 1 ) ) + 1 )::INT)],
-                NOW( ));
+                NOW( ), (RANDOM( ) * 100000 + 1)::DECIMAL);
       END LOOP;
   END $$;
