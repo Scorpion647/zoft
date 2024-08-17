@@ -26,6 +26,7 @@ export function useSharedState() {
     facttotal: 0,
     totalfactura: 0,
     nofactura: "",
+    TRMNUM: 0,
 
 
   });

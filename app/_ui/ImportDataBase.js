@@ -6,8 +6,9 @@ import 'handsontable/dist/handsontable.full.css';
 import Handsontable from 'handsontable';
 import { Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
-import { insertMaterial, insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists } from '@/app/_lib/database/service'; 
+import { insertMaterial, insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial } from '@/app/_lib/database/service'; 
 import { Search } from 'handsontable/plugins';
+import { Domain } from 'domain';
 
 const initialData = {
   materials: Array(20).fill().map(() => ['', '', '', '']),
@@ -85,14 +86,31 @@ export const ImportDataBase = () => {
 
   const validateAndInsertData = async () => {
     setIsProcessing(true);
-
+  
+    // Cargar los datos existentes de la base de datos para comparación
+    let existingRecords = [];
+    let existingMaterials = [];
+    let existingSuppliers = [];
+  
+    try {
+      if (selectedTable === 'records') {
+        existingRecords = await getRecords(1, 1000);
+      } else if (selectedTable === 'materials') {
+        existingMaterials = await getMaterials(1, 4000);
+      } else if (selectedTable === 'suppliers') {
+        existingSuppliers = await getSuppliers(1, 100);
+      }
+    } catch (error) {
+      console.error('Error fetching existing data:', error);
+    }
+  
+    // Procesar los datos del archivo Excel
     const invalidMaterialEntries = [];
     const invalidSupplierEntries = [];
-
+  
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-
-
+  
       if (selectedTable === 'records') {
         const [
           purchase_order,
@@ -106,115 +124,185 @@ export const ImportDataBase = () => {
           supplier_name,
           currency
         ] = row;
-
+  
+        // Verificar si el registro ya existe
+        const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.position === position && record.material_code === material_code);
         let materialExists = false;
         let supplierExists = false;
-        let supplierId = 0 ; 
-
-            try {
-                const material = await getMaterial({ material_code });
-                materialExists = !!material; 
-
-               
-                const suppliers = await getSuppliers(1, 100);
-
-                
-                if (suppliers && Array.isArray(suppliers)) {
-                    const supplier = suppliers.find(supplier => supplier.name === supplier_name);
-                    if (supplier) {
-                        console.log("funcionaaaaaaa")
-                        supplierExists = true;
-                        supplierId = supplier.id; 
-                        console.log(supplier.id)
-                    }
-                }
-            } catch (error) {
-                console.error('Error validating data:', error);
-            }
-
-            if (!materialExists) {
-                invalidMaterialEntries.push(i + 1);
-            }
-            if (!supplierExists) {
-                const supplier = await insertSupplier()
-                invalidSupplierEntries.push(i + 1); 
-            }
-        
+        let supplierId = 0;
   
-
-        
-
+        // Verificar si el material y proveedor existen
+        try {
+          const material = await getMaterial({ material_code });
+          materialExists = !!material;
+  
+          const suppliers = await getSuppliers(1, 100);
+          if (suppliers && Array.isArray(suppliers)) {
+            const supplier = suppliers.find(supplier => supplier.name === supplier_name);
+            if (supplier) {
+              supplierExists = true;
+              supplierId = supplier.id;
+            }
+          }
+        } catch (error) {
+          console.error('Error validating data:', error);
+        }
+  
+        if (!materialExists) {
+          invalidMaterialEntries.push(i + 1);
+        }
+        if (!supplierExists) {
+          const userResponse = window.confirm(`El proveedor ${supplier_name} no existe. ¿Deseas crear uno nuevo?`);
+          if (userResponse) {
+            const domain = prompt(`Introduce el dominio para el proveedor ${supplier_name}:`);
+            if (domain) {
+              // Aquí puedes implementar la función para verificar si el dominio ya existe
+              const domainExists = await getSupplier("", domain);
+              if (domainExists.domain !== undefined) {
+                alert(`El dominio ${domain} ya está en uso. Introduce un dominio diferente.`);
+                i--; // Vuelve a intentar la inserción de este registro
+                continue;
+              } else {
+                const newSupplier = await insertSupplier({ domain: domain, name: supplier_name });
+                if (newSupplier) {
+                  supplierExists = true;
+                  supplierId = newSupplier.id;
+                } else {
+                  alert('Error al crear el nuevo proveedor.');
+                  i--; // Vuelve a intentar la inserción de este registro
+                  continue;
+                }
+              }
+            } else {
+              alert('El dominio es obligatorio para crear un proveedor.');
+              i--; // Vuelve a intentar la inserción de este registro
+              continue;
+            }
+          } else {
+            invalidSupplierEntries.push(i + 1);
+            continue; // Pasa al siguiente registro sin intentar la inserción
+          }
+        }
+  
         if (materialExists && supplierExists) {
           const args = {
-            item: position, 
+            item: position,
             quantity: Number(quantity),
             material_code,
             purchase_order,
             measurement_unit,
-            unit_price: parseFloat(Number(unit_price).toFixed(2)*100).toFixed(0),
-            currency: currency ,
+            unit_price: parseFloat(parseFloat(unit_price).toFixed(2) * 100).toFixed(0),
+            currency: currency,
             created_at: new Date().toISOString(),
-            supplier_id: supplierId, 
+            supplier_id: supplierId,
             description: description,
             net_price: parseFloat(net_price * 100).toFixed(0),
           };
 
-          try {
-            const result = await insertRecord(args);
-            if (result instanceof Error) {
-              console.error('Error inserting record:', result);
-            } else {
-              Alert("Registros insertados con exito")
+            // Insertar nuevo registro
+            try {
+              const result = await insertRecord(args);
               console.log('Record inserted successfully:', result);
+            } catch (error) {
+              // Asegúrate de mostrar el mensaje del error
+              console.error('Error processing data:', error.message);
+            
+              // Muestra detalles del error si están disponibles
+              if (error.details) {
+                console.error('Error details:', error.details);
+              }
+            
+              // Muestra el stack trace del error para depuración adicional
+              console.error('Error stack trace:', error.stack);
             }
-          } catch (error) {
-            console.error('Error processing data:', error);
-          }
+          
         }
       } else if (selectedTable === 'materials') {
         const [code, subheading, type, measurement_unit] = row;
   
-  // Utilizar directamente valores predeterminados
-  let args = { code, subheading };
-  
-  if (type !== "") args.type = type;
-  if (measurement_unit !== "") args.measurement_unit = measurement_unit;
-      
-        
-        try {
-          const result = await insertMaterial(args);
-          if (result instanceof Error) {
-            console.error('Error inserting material:', result);
-          } else {
-            Alert("Materiales insertados con exito")
-            console.log('Material inserted successfully:', result);
+        const existingMaterial = existingMaterials.find(material => material.code === code);
+        const args = { code, subheading };
+        if(type === "national" || type === "foreign"){
+          args.type = type
+        }else if(type === "NACIONAL"){
+          args.type = "national"
+        }else if(type === "EXTRANJERO"){
+          args.type = "foreign"
+        }
+        if (measurement_unit !== "" ) args.measurement_unit = measurement_unit;
+        const revisar = await getMaterial(code)
+        if (revisar.code == code) {
+          const safeTrim = (value) => typeof value === 'string' ? value.trim() : '';
+
+          const revisarCode = safeTrim(revisar.code);
+          const revisarSubheading = safeTrim(revisar.subheading);
+          const revisarType = safeTrim(revisar.type);
+          const revisarMeasurementUnit = safeTrim(revisar.measurement_unit);
+          
+          const codeTrimmed = safeTrim(code);
+          const subheadingTrimmed = safeTrim(subheading);
+          const typeTrimmed = safeTrim(type);
+          const measurementUnitTrimmed = safeTrim(measurement_unit);
+          
+          
+          if(revisarType !== typeTrimmed || revisarMeasurementUnit !== measurementUnitTrimmed){
+            try {
+              const update = await updateMaterial(code, args);
+              if (update instanceof Error) {
+                console.error('Error updating material:', update);
+              } else {
+                console.log('Material updated successfully:', update);
+              }
+            } catch (error) {
+              console.error('Error updating material:', error);
+            }
+          }else{
+            console.log("todo esta bien por aqui")
           }
-        } catch (error) {
-          console.error('Error processing data:', error);
+        } else {
+          // Insertar nuevo material
+          
+          try {
+            const result = await insertMaterial(args);
+            if (result instanceof Error) {
+              console.error('Error inserting material:', result);
+            } else {
+              console.log('Material inserted successfully:', result);
+            }
+          } catch (error) {
+            console.error('Error inserting material:', error);
+          }
         }
       } else if (selectedTable === 'suppliers') {
         const [domain, name] = row;
-        const args = { domain, name }; 
-
-        try {
-          const result = await insertSupplier(args);
-          if (result instanceof Error) {
-            console.error('Error inserting supplier:', result);
-          } else {
-            Alert("Proveedores insertados con exito")
-            console.log('Supplier inserted successfully:', result);
+        const existingSupplier = existingSuppliers.find(supplier => supplier.domain === domain);
+  
+        const args = { domain, name };
+  
+        if (existingSupplier) {
+          // Aquí puedes implementar la lógica para actualizar el proveedor existente si es necesario
+          console.log('Updating supplier:', args);
+        } else {
+          // Insertar nuevo proveedor
+          try {
+            const result = await insertSupplier(args);
+            if (result instanceof Error) {
+              console.error('Error inserting supplier:', result);
+            } else {
+              console.log('Supplier inserted successfully:', result);
+            }
+          } catch (error) {
+            console.error('Error inserting supplier:', error);
           }
-        } catch (error) {
-          console.error('Error processing data:', error);
         }
       }
     }
-
+  
     if (invalidMaterialEntries.length > 0 || invalidSupplierEntries.length > 0) {
       const groupConsecutiveNumbers = (arr) => {
         const grouped = [];
         let temp = [arr[0]];
-
+  
         for (let i = 1; i < arr.length; i++) {
           if (arr[i] === arr[i - 1] + 1) {
             temp.push(arr[i]);
@@ -224,14 +312,14 @@ export const ImportDataBase = () => {
           }
         }
         grouped.push(temp);
-
+  
         return grouped.map(group => (group.length > 1 ? `${group[0]}-${group[group.length - 1]}` : `${group[0]}`));
       };
-
+  
       const materialErrors = invalidMaterialEntries.length > 0 ? `Material code not found at rows ${groupConsecutiveNumbers(invalidMaterialEntries).join(', ')}` : '';
       const supplierErrors = invalidSupplierEntries.length > 0 ? `Supplier not found at rows ${groupConsecutiveNumbers(invalidSupplierEntries).join(', ')}` : '';
       const errorMessage = [materialErrors, supplierErrors].filter(msg => msg).join('\n');
-
+  
       toast({
         title: 'Validation Errors',
         description: errorMessage,
@@ -241,9 +329,9 @@ export const ImportDataBase = () => {
         duration: 10000,
       });
     }
-
+  
     setIsProcessing(false);
-    setProgress(100); 
+    setProgress(100);
   };
 
 const getsuplier = async (record) => {
@@ -263,7 +351,7 @@ const getsuplier = async (record) => {
   const fetchData = async () => {
     try {
       if (selectedTable === 'records') {
-        const records = await getRecords(1, 100);
+        const records = await getRecords(1, 1000);
         
         if (records) {
           // Obtén los IDs de proveedores únicos de los registros

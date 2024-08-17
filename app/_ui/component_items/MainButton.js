@@ -6,7 +6,6 @@ const MainButton = ({ onClick, text, icon, backgroundColor = '#F1D803', disabled
     onClick={onClick} 
     display="block" 
     whiteSpace='normal' 
-    colorScheme='teal' 
     backgroundColor={disabled ? 'gray.300' : backgroundColor} 
     transition="width 0.3s ease-in-out"
     isDisabled={disabled}

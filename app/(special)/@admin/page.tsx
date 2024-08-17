@@ -7,7 +7,7 @@ import { CreateLargeUser, CreateSmallUser } from "@/app/_ui/CreateUser";
 import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
 import { useSharedState } from '@/app/_ui/useSharedState';
 import { FaUserCheck } from "react-icons/fa";
-import { Tooltip, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, Icon, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
+import { ModalOverlay,FormControl,ModalBody,FormLabel,Tooltip, Modal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, Icon, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
 import { SearchIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 import { ImportDataBase } from '@/app/_ui/ImportDataBase'
 import { IoMenu } from "react-icons/io5";
@@ -148,13 +148,33 @@ const handleVisibilityChange = (visible: any) => {
       onOpen();
 
       try {
-          await handleExport();
+        console.log(state.TRMNUM)
+          await handleExport({TRM: state.TRMNUM});
       } catch (err) {
           setError('Error al generar el archivo CSV.');
       } finally {
           setIsLoading(false);
           onClose();
       }
+  };
+
+
+
+  const { isOpen: isOpenSecondModal, onOpen: onOpenSecondModal, onClose: onCloseSecondModal } = useDisclosure();
+
+   // Estado del input y la variable actualizada
+   const [inputValue, setInputValue] = useState('');
+   const [updatedValue, setUpdatedValue] = useState('');
+
+   // Manejo del cambio en el input
+  const handleInputChange = (event) => {
+    setInputValue(event.target.value);
+  };
+
+  // Manejo del clic en el botón "Aplicar" del nuevo modal
+  const handleApply = () => {
+    updateState('TRMNUM', inputValue);
+    onCloseSecondModal(); // Cierra el nuevo modal
   };
 
 
@@ -182,6 +202,7 @@ const handleVisibilityChange = (visible: any) => {
                                     </MenuButton>
                                     <MenuList>
                                         <MenuItem className=' font-bold' onClick={() => alert('Option 2')}>Colaboradores</MenuItem>
+                                        <MenuItem color="#7E801E" className=' font-bold' onClick={onOpenSecondModal}>Actualizar TRM</MenuItem>
                                         <MenuItem color="red" className=' font-bold' onClick={handleLogout}>Cerrar sesion</MenuItem>
                                     </MenuList>
                                 </Menu>
@@ -192,14 +213,15 @@ const handleVisibilityChange = (visible: any) => {
                                     Administrador
                                 </Text>
                             </Box>
-                        </Flex>
-                        <HStack height='100%' mt={3} spacing={2} align="stretch" >
+                        </Flex> 
+                        <HStack height='100%' mt={3} spacing={2} align="stretch">
                             <VStack  justify='center' width={MenuL ? '7%' : '20%'} bg="white" border="1px" borderColor="gray.300" backgroundColor="gray.100" borderRadius="md" className=" p-3" align="center" transition="width 0.3s ease-in-out" >
                                 <VStack align='stretch' justify='center'>
                                     <MainButton
                                         onClick={() => screen(1)}
                                         text="Busqueda de Registros"
                                         icon={<SearchIcon w={4} h={4} color="black" />}
+                                        backgroundColor={isRegistro ? 'teal' : '#F1D803'}
                                         showRightBox={showRightBox}
                                         isScreenSmall={isScreenSmall}
                                         MenuL={MenuL}
@@ -208,6 +230,7 @@ const handleVisibilityChange = (visible: any) => {
                                         onClick={() => screen(2)}
                                         text="Autorizacion de Usuarios"
                                         icon={<CheckCircleIcon w={4} h={4} color="black" />}
+                                        backgroundColor={isUsuario ? 'teal' : '#F1D803'}
                                         showRightBox={showRightBox}
                                         isScreenSmall={isScreenSmall}
                                         MenuL={MenuL}
@@ -216,6 +239,7 @@ const handleVisibilityChange = (visible: any) => {
                                         onClick={() => screen(3)}
                                         text="Dominios"
                                         icon={<AtSignIcon w={4} h={4} color="black" />}
+                                        backgroundColor={isDominio ? 'teal' : '#F1D803'}
                                         showRightBox={showRightBox}
                                         isScreenSmall={isScreenSmall}
                                         MenuL={MenuL}
@@ -224,6 +248,7 @@ const handleVisibilityChange = (visible: any) => {
                                         onClick={() => screen(4)}
                                         text="Base de Datos"
                                         icon={<AttachmentIcon w={4} h={4} color="black" />}
+                                        backgroundColor={isDatos ? 'teal' : '#F1D803'}
                                         showRightBox={showRightBox}
                                         isScreenSmall={isScreenSmall}
                                         MenuL={MenuL}
@@ -313,7 +338,7 @@ const handleVisibilityChange = (visible: any) => {
                                         {isScreenLarge && (
                                             <>
 
-                                                <ImportDataBase />
+                                                <ImportDataBase   />
 
 
                                             </>
@@ -341,6 +366,37 @@ const handleVisibilityChange = (visible: any) => {
                                 )}
                             </VStack>
                         </HStack>
+
+                        <Modal isOpen={isOpenSecondModal} onClose={onCloseSecondModal}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Actualizar TRM</ModalHeader>
+          <ModalBody>
+            <FormControl>
+              <FormLabel>TRM</FormLabel>
+              <Input
+                type="number"
+                value={inputValue}
+                onChange={handleInputChange}
+              />
+            </FormControl>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" onClick={handleApply}>
+              Aplicar
+            </Button>
+            <Button variant="ghost" onClick={onCloseSecondModal} ml={3}>
+              Cerrar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+
+
+
+
+
                         <Modal isOpen={isOpen} onClose={onClose}>
                 <ModalContent>
                     <ModalHeader>Exportando CSV</ModalHeader>

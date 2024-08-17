@@ -2,11 +2,26 @@
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import { getRecordsInfo, getRecords, getMaterial } from '@/app/_lib/database/service'; // Ajusta la ruta según tu estructura de archivos
+import { parse } from '@supabase/ssr';
 
 async function fetchMaterialData(materialCode) {
     // Obtener los detalles del material basado en el material_code
     const material = await getMaterial(materialCode);
     return material;
+}
+
+function removeTrailingZeros(num) {
+    // Convertimos el número a cadena para manipularlo
+    let str = num.toString();
+
+    // Verificamos si hay un punto seguido de dos ceros
+    if (str.includes('.00')) {
+        // Si es así, eliminamos los dos ceros y el punto
+        return str.replace('.00', '');
+    }
+
+    // Si no cumple la condición, retornamos el número original
+    return str;
 }
 
 async function fetchRecordAndMaterialData(recordId) {
@@ -22,7 +37,7 @@ async function fetchRecordAndMaterialData(recordId) {
     return { record, material };
 }
 
-export async function handleExport() {
+export async function handleExport({ TRM }) {
     try {
         // Obtén los datos de la base de datos
         const recordsInfo = await getRecordsInfo(1, 100); // Ajusta los parámetros según sea necesario
@@ -30,23 +45,39 @@ export async function handleExport() {
         if (recordsInfo) {
             // Prepara los datos para la exportación
             const dataPromises = recordsInfo.map(async (recordInfo) => {
-                const { record, material } = await fetchRecordAndMaterialData(recordInfo.record_id) || {};
+                const fetchedData = await fetchRecordAndMaterialData(recordInfo.record_id);
+                
+                // Verificar si fetchedData es nulo o undefined
+                if (!fetchedData) return null;
+
+                const { record, material } = fetchedData;
                 let conversion = 0;
                 if (material?.measurement_unit === "U") {
                     conversion = 1;
                 } else {
                     conversion = recordInfo.gross_weight / recordInfo.billed_quantity;
                 }
+                let subhe = "";
+
+                // Verificación adicional para asegurarse de que material y material.subheading existan
+                if (material && material.subheading !== undefined) {
+                    console.log("entramos");
+                    console.log(material.subheading);
+                    console.log(material?.code);
+                    subhe = material.subheading;
+                } else {
+                    subhe = '124';
+                }
 
                 return {
-                    'CODSUBP': material?.subheading || '',
+                    'CODSUBP': subhe || '',
                     'CODEMBALAJE': "PK",
                     'NMPESO_BRUTO': recordInfo.gross_weight || '',
                     'NMPESO_NETO': recordInfo.gross_weight || '',
                     'NMBULTOS': recordInfo.packages || '',
                     'CODBANDERA': 169,
                     'CODPAIS_ORIGEN': 169,
-                    'PTTASA_CAMBIO': recordInfo.trm || 0,
+                    'PTTASA_CAMBIO': recordInfo.trm,
                     'CODPAIS_COMPRA': 169,
                     'CODPAIS_DESTINO': 953,
                     'CODPAIS_PROCEDENCIA': 169,
@@ -56,13 +87,13 @@ export async function handleExport() {
                     'OTROS_GASTOS': 0,
                     'CODITEM': material?.code || 'N/A',
                     'NMCANTIDAD': recordInfo.billed_quantity || '',
-                    'PTPRECIO': recordInfo.trm !== 0 ? ((recordInfo.billed_unit_price / 100) / recordInfo.trm) : (recordInfo.billed_unit_price / 100),
+                    'PTPRECIO': recordInfo.conversion === 0  ? removeTrailingZeros(parseFloat((recordInfo.billed_unit_price / 100) / parseFloat(recordInfo.trm).toFixed(2)).toFixed(2)) : removeTrailingZeros(parseFloat(recordInfo.billed_unit_price / 100).toFixed(2)),
                     'NMCONVERSION': conversion || 'N/A' // Ajusta si hay un campo diferente en RecordInfoRow
                 };
             });
 
-            // Espera a que todas las promesas se resuelvan
-            const allData = await Promise.all(dataPromises);
+            // Espera a que todas las promesas se resuelvan y filtra los resultados nulos
+            const allData = (await Promise.all(dataPromises)).filter(data => data !== null);
 
             // Agrupación y adición de datos
             const groupedData = [];

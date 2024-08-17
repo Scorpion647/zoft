@@ -10,14 +10,15 @@ export const Gettempleados = ({ supplier }) => {
 
     useEffect(() => {
         const fetchEmployees = async () => {
-            const domainPart = supplier.domain.split('@')[1];
-            try {
-                const data = await getEmployees(supplier.id);
 
-                console.log('Fetched employees:', data);
+            try {
+                const data = await getEmployees(1,50);
+
+                console.log("toda la data: ", data)
+                  
 
                 if (Array.isArray(data)) {
-                    const filteredEmployees = data.filter(emp => emp.email?.split('@')[1] === domainPart);
+                    const filteredEmployees = data.filter(emp => emp.email);
                     setEmployees(filteredEmployees);
                 } else {
                     
