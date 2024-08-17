@@ -20,7 +20,7 @@ import { handleExport } from '@/app/_ui/ExportButton';
 
 
 
-function formatCurrency(number) {
+function formatCurrency(number:number) {
     return new Intl.NumberFormat('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -167,7 +167,7 @@ const handleVisibilityChange = (visible: any) => {
    const [updatedValue, setUpdatedValue] = useState('');
 
    // Manejo del cambio en el input
-  const handleInputChange = (event) => {
+  const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
 
