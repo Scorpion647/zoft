@@ -16,7 +16,7 @@ export default function SpecialLayout({ user, admin }: {
         checkIfAdmin().then(isAdmin => {
             if (isAdmin instanceof CustomDataError) {
                 // TODO: handle error
-            } else {
+            } else if (isAdmin===true) {
                 setIsAdmin(isAdmin);
             }
             setIsLoading(false);
