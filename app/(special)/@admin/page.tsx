@@ -28,7 +28,7 @@ function formatCurrency(number) {
   }
 
 
-const admin = () => {
+export default function Admin(){
     const { state, updateState } = useSharedState();
     const [MenuL, setMenuL] = useState(true)
     const [AddDomain, setAddDomain] = useState(false);
@@ -513,9 +513,7 @@ const handleVisibilityChange = (visible: any) => {
             </div>
         </ChakraProvider>
     );
-};
-
-export default admin;
+}
 
 
 
