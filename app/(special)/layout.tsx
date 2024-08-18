@@ -1,23 +1,26 @@
 "use client";
 
-import { checkIfAdmin } from '@/app/_lib/supabase/client';
+import { getRole } from '@/app/_lib/supabase/server';
 import { useEffect, useState } from 'react';
 import { CustomDataError } from '../_lib/definitions';
 import PageLoader from '../_ui/pageLoader';
 
-export default function SpecialLayout({ user, admin }: {
+export default function SpecialLayout({ user, admin, guest }: {
     user: React.ReactNode,
     admin: React.ReactNode,
+    guest: React.ReactNode,
 }) {
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [role, setRole] = useState("employee");
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        checkIfAdmin().then(isAdmin => {
-            if (isAdmin instanceof CustomDataError) {
+        getRole().then(role => {
+            if (role instanceof CustomDataError) {
                 // TODO: handle error
-            } else if (isAdmin===true) {
-                setIsAdmin(isAdmin);
+            } else if (role) {
+                setRole(role);
+            } else {
+                // TODO: handle unexpectede rror
             }
             setIsLoading(false);
         });
@@ -25,7 +28,8 @@ export default function SpecialLayout({ user, admin }: {
 
     return (
         <main className='flex flex-col items-center justify-center h-screen'>
-            {isLoading ? <PageLoader /> : isAdmin ? admin : user}
+            {isLoading ? <PageLoader /> : role === "administrator" ? admin : role === "employee" ? user :
+                <div>Por favor espera a que el administrador valide tu información para acceder.</div>}
         </main>
     )
 }
