@@ -1,9 +1,5 @@
 import { reauthenticate } from "./supabase/client";
 import { AuthError, AuthResponse, PostgrestError } from "@supabase/supabase-js";
-import {Database} from "@/app/_lib/supabase/db";
-
-export type DBTables = Database['public']['Tables']
-export type DBFunctions = Database['public']['Functions']
 
 export enum AccessDataFields {
     email = "email",
