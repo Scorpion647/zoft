@@ -37,7 +37,7 @@ export async function signup(formData: FormData) {
 
 
     const supabase = createClient()
-    const { data: EData, error: supplierError } = await supabase.from('suppliers').select('*').eq('domain', email.split('@')[1]).limit(1).maybeSingle()
+    const { data: EData, error: supplierError } = await supabase.from('supplier').select('*').eq('domain', email.split('@')[1]).limit(1).maybeSingle()
 
     if (supplierError || !EData) {
         const { error } = await supabase.auth.signUp({
