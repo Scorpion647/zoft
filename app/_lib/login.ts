@@ -29,7 +29,7 @@ export async function login(formData: FormData): Promise<void | CustomDataError>
 
     const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await (await supabase).auth.signInWithPassword({
         email,
         password
     })

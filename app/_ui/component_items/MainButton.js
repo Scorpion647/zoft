@@ -3,7 +3,9 @@ import { Button, HStack } from '@chakra-ui/react';
 
 const MainButton = ({ onClick, text, icon, backgroundColor = '#F1D803', disabled = false, showRightBox, isScreenSmall, MenuL }) => (
   <Button 
-    onClick={onClick} 
+    onClick={onClick}
+    width={isScreenSmall ? "20px" : "100%"}
+    height={isScreenSmall ? "20px" : "40px"}
     display="block" 
     whiteSpace='normal' 
     backgroundColor={disabled ? 'gray.300' : backgroundColor} 

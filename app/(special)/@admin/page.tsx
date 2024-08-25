@@ -11,16 +11,16 @@ import { ModalOverlay,FormControl,ModalBody,FormLabel,Tooltip, Modal, ModalClose
 import { SearchIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 import { ImportDataBase } from '@/app/_ui/ImportDataBase'
 import { IoMenu } from "react-icons/io5";
-import { redirect } from 'next/navigation'
 import { useRouter } from "next/navigation";
 import MainButton from '@/app/_ui/component_items/MainButton';
 import { handleExport } from '@/app/_ui/ExportButton';
+import {Tracking_bd} from '@/app/_ui/Tracking_bd'
 
 
 
 
 
-function formatCurrency(number) {
+function _formatCurrency(number) {
     return new Intl.NumberFormat('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -37,6 +37,7 @@ const admin = () => {
     const [isUsuario, setisUsuario] = useState(false);
     const [isDominio, setisDominio] = useState(false);
     const [isDatos, setisDatos] = useState(false);
+    const [isTracking, setisTracking] = useState(false);
 
 
     const [showRightBox, setShowRightBox] = useState(false);
@@ -84,21 +85,24 @@ const admin = () => {
             setisDatos(false);
             setisDominio(false);
             setisUsuario(false);
-            setisInicio(false)
+            setisInicio(false);
+            setisTracking(false);
         }
         if (numero == 2) {
             setisRegistro(false);
             setisDatos(false);
             setisDominio(false);
             setisUsuario(true);
-            setisInicio(false)
+            setisInicio(false);
+            setisTracking(false);
         }
         if (numero == 3) {
             setisRegistro(false);
             setisDatos(false);
             setisDominio(true);
             setisUsuario(false);
-            setisInicio(false)
+            setisInicio(false);
+            setisTracking(false);
         }
         if (numero == 4) {
             setisRegistro(false);
@@ -106,6 +110,15 @@ const admin = () => {
             setisDominio(false);
             setisUsuario(false);
             setisInicio(false)
+            setisTracking(false);
+        }
+        if (numero == 5) {
+            setisRegistro(false);
+            setisDatos(false);
+            setisDominio(false);
+            setisUsuario(false);
+            setisInicio(false);
+            setisTracking(true);
         }
 
     };
@@ -129,7 +142,7 @@ const admin = () => {
     const toggleActive = () => {
         setMenuL(prevState => !prevState);
     };
-//onClick={toggleActive}
+
 
 
 const handleVisibilityChange = (visible: any) => {
@@ -142,14 +155,17 @@ const handleVisibilityChange = (visible: any) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleButtonClick = async () => {
-      setIsLoading(true);
+  const handleButtonClick = async (visibledata: any) => {
+      
+    
+    
+    setIsLoading(true);
       setError(null);
       onOpen();
 
       try {
         console.log(state.TRMNUM)
-          await handleExport({TRM: state.TRMNUM});
+          await handleExport(visibledata);
       } catch (err) {
           setError('Error al generar el archivo CSV.');
       } finally {
@@ -162,19 +178,18 @@ const handleVisibilityChange = (visible: any) => {
 
   const { isOpen: isOpenSecondModal, onOpen: onOpenSecondModal, onClose: onCloseSecondModal } = useDisclosure();
 
-   // Estado del input y la variable actualizada
    const [inputValue, setInputValue] = useState('');
    const [updatedValue, setUpdatedValue] = useState('');
 
-   // Manejo del cambio en el input
+
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
   };
 
-  // Manejo del clic en el botón "Aplicar" del nuevo modal
+
   const handleApply = () => {
     updateState('TRMNUM', inputValue);
-    onCloseSecondModal(); // Cierra el nuevo modal
+    onCloseSecondModal(); 
   };
 
 
@@ -194,16 +209,17 @@ const handleVisibilityChange = (visible: any) => {
                             position="relative"
                         >
                             <Box position="absolute" right={4}>
+                           
                                 <Menu>
                                     <MenuButton >
                                         <Button colorScheme='teal' backgroundColor='#F1D803'>
                                             <Icon as={IoMenu} w={5} h={5} color='black' />
                                         </Button>
                                     </MenuButton>
-                                    <MenuList>
-                                        <MenuItem className=' font-bold' onClick={() => alert('Option 2')}>Colaboradores</MenuItem>
-                                        <MenuItem color="#7E801E" className=' font-bold' onClick={onOpenSecondModal}>Actualizar TRM</MenuItem>
-                                        <MenuItem color="red" className=' font-bold' onClick={handleLogout}>Cerrar sesion</MenuItem>
+                                    <MenuList   borderColor="gray.400" p="0">
+                                        <MenuItem bgColor="gray.100" p="8px 16px" borderBottom="1px" className=' font-semibold ' onClick={() => alert('Option 2')}>Colaboradores</MenuItem>
+                                        <MenuItem bgColor="gray.100" p="8px 16px" borderBottom="1px"  className=' font-semibold ' onClick={onOpenSecondModal}>Actualizar TRM</MenuItem>
+                                        <MenuItem bgColor="gray.100" p="8px 16px"  color="red" className=' font-semibold ' onClick={handleLogout}>Cerrar sesion</MenuItem>
                                     </MenuList>
                                 </Menu>
 
@@ -215,12 +231,12 @@ const handleVisibilityChange = (visible: any) => {
                             </Box>
                         </Flex> 
                         <HStack height='100%' mt={3} spacing={2} align="stretch">
-                            <VStack  justify='center' width={MenuL ? '7%' : '20%'} bg="white" border="1px" borderColor="gray.300" backgroundColor="gray.100" borderRadius="md" className=" p-3" align="center" transition="width 0.3s ease-in-out" >
+                            <VStack  justify='center' width={MenuL ? '7%' : '20%'} bg="white" border="1px" borderColor="gray.300" backgroundColor="gray.100" borderRadius="md" p={isScreenSmall ? "1" : "3"} align="center" transition="width 0.3s ease-in-out" >
                                 <VStack align='stretch' justify='center'>
                                     <MainButton
                                         onClick={() => screen(1)}
                                         text="Busqueda de Registros"
-                                        icon={<SearchIcon w={4} h={4} color="black" />}
+                                        icon={<SearchIcon w={isScreenSmall ? "80%" : "90%"} h={isScreenSmall ? "80%" : "90%"} color="black" />}
                                         backgroundColor={isRegistro ? 'teal' : '#F1D803'}
                                         showRightBox={showRightBox}
                                         isScreenSmall={isScreenSmall}
@@ -254,7 +270,7 @@ const handleVisibilityChange = (visible: any) => {
                                         MenuL={MenuL}
                                     />
                                     <MainButton
-                                        onClick={handleButtonClick}
+                                        onClick={() => screen(5)}
                                         text="Descargar CSV"
                                         icon={<DownloadIcon w={4} h={4} color="black" />}
                                         backgroundColor='gray.300'
@@ -299,17 +315,17 @@ const handleVisibilityChange = (visible: any) => {
                                 className=" p-3"
                                 align="stretch"  >
 
-                                {isRegistro && !isUsuario && !isDominio && !isDatos && (
+                                {isRegistro && !isUsuario && !isDominio && !isDatos && !isTracking && (
 
                                     <>
-                                        {isScreenLarge && <CreatelargeAdmin onVisibilityChange={handleVisibilityChange} sharedState={state} updateSharedState={updateState} />}
+                                        {isScreenLarge && <CreatelargeAdmin sharedState={state} updateSharedState={updateState} />}
                                         {isScreenSmall && <CreateSmallAdmin />}
                                     </>
 
 
 
                                 )}
-                                {!isRegistro && isUsuario && !isDominio && !isDatos && (
+                                {!isRegistro && isUsuario && !isDominio && !isDatos && !isTracking && (
 
                                     <>
                                         {isScreenLarge && <CreateLargeUser />}
@@ -318,7 +334,7 @@ const handleVisibilityChange = (visible: any) => {
 
 
                                 )}
-                                {!isRegistro && !isUsuario && isDominio && !isDatos && (
+                                {!isRegistro && !isUsuario && isDominio && !isDatos && !isTracking && (
 
 
                                     <>
@@ -332,7 +348,7 @@ const handleVisibilityChange = (visible: any) => {
 
 
                                 )}
-                                {!isRegistro && !isUsuario && !isDominio && isDatos && (
+                                {!isRegistro && !isUsuario && !isDominio && isDatos && !isTracking && (
 
                                     <>
                                         {isScreenLarge && (
@@ -363,6 +379,9 @@ const handleVisibilityChange = (visible: any) => {
 
                                     </>
 
+                                )}
+                                {!isRegistro && !isUsuario && !isDominio && !isDatos && isTracking && (
+                                    <Tracking_bd onButtonClick={handleButtonClick}/>
                                 )}
                             </VStack>
                         </HStack>
@@ -475,11 +494,11 @@ const handleVisibilityChange = (visible: any) => {
                                 </HStack>
                                 <HStack justifyContent="space-between" alignItems="flex-start">
                                 <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Precio Unitario Fact</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${formatCurrency(state.factunit)}</p>
+                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${_formatCurrency(state.factunit)}</p>
                                 </HStack>
                                 <HStack justifyContent="space-between" alignItems="flex-start">
                                 <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Valor Total Fact</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${formatCurrency(state.facttotal)}</p>
+                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${_formatCurrency(state.facttotal)}</p>
                                 </HStack>
                                 
                                 

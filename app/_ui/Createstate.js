@@ -1,17 +1,17 @@
-// pages/about.js
+
 'use client';
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
+import { Spinner,Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
 import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
-//import { getBaseRecord, storeBaseRecordExtraInfo } from '@/app/_lib/database/records'
 import { getRecords, getMaterial, getMaterials, getRecordsInfo, getSupplier, insertRecordInfo, getRecord, updateMaterial } from '@/app/_lib/database/service';
 import ReturnTable from '@/app/_ui/components/ReturnTable'
 import {Associate_invoice} from '@/app/_ui/Associate_invoice'
-import { useSharedState } from "./useSharedState";
+
+
 
 
 
@@ -26,7 +26,6 @@ function formatDate(dateString) {
 function groupByPurchaseOrder(recordsInfo, records) {
   const groupedData = {};
 
-  // Mapea el ID de cada record a su purchase_order
   const recordIdToOrder = records.reduce((acc, record) => {
     acc[record.id] = record.purchase_order;
     return acc;
@@ -41,15 +40,15 @@ function groupByPurchaseOrder(recordsInfo, records) {
         record_ids: [],
       };
     }
-    // Actualiza la fecha más reciente
+
     if (new Date(item.modified_at || item.created_at) > new Date(groupedData[order].fecha)) {
       groupedData[order].fecha = item.modified_at || item.created_at;
     }
-    // Determina el estado
-    if (item.status === "ERROR") {
-      groupedData[order].estado = "ERROR";
-    } else if (item.status === "PENDING" && groupedData[order].estado !== "ERROR") {
-      groupedData[order].estado = "PENDING";
+
+    if (item.status === "rejected") {
+      groupedData[order].estado = "rejected";
+    } else if (item.status === "pending" && groupedData[order].estado !== "rejected") {
+      groupedData[order].estado = "pending";
     }
     groupedData[order].record_ids.push(item.record_id);
   });
@@ -84,14 +83,12 @@ const months = [
 
 
 
-export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityChange }) => {
+export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
 
 
   
 
-  useEffect(() => {
-    onVisibilityChange(sharedState.conditionMet);
-  }, [sharedState.conditionMet]);
+ 
 
 
 
@@ -104,6 +101,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
   const [selectedStatus, setSelectedStatus] = useState('EN PROCESO');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [isTable, setisTable] = useState(false);
+  const [IsLoading,setIsLoading] = useState(false)
 
 
 
@@ -111,31 +109,45 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
 
   const [filteredData, setFilteredData] = useState([]);
 
-
-
+  useEffect(() => {
+    if (isTable === false) {
+      console.log("Cargando datos...");
+      setIsLoading(true); 
+  
+      const fetchData = async () => {
+        try {
+          const records = await getRecords(1, 1000);
+          if (Array.isArray(records)) {
+            const recordsInfo = await getRecordsInfo(1, 1000);
+            if (Array.isArray(recordsInfo)) {
+              const groupedData = groupByPurchaseOrder(recordsInfo, records);
+              setFilteredData(groupedData);
+            }
+          }
+        } catch (error) {
+          console.error("Error al obtener datos:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+  
+      fetchData();
+    }
+  }, [isTable]);
+  
 
   useEffect(() => {
-    async function fetchData() {
-      const records = await getRecords(1, 1000); // Ajusta según necesites
-      if (Array.isArray(records)) {
-        const recordsInfo = await getRecordsInfo(1, 1000); // Ajusta según necesites
-        if (Array.isArray(recordsInfo)) {
-          const groupedData = groupByPurchaseOrder(recordsInfo, records);
-          setFilteredData(groupedData);
-        }
-      }
-    }
-    fetchData();
-  }, []);
+    console.log("IsLoading:", IsLoading);
+  }, [IsLoading]);
+
+  
 
   const handleSupplierClickk = (item) => {
     console.log(item.estado)
     if (item.estado === "SUCCESS" || item.estado === "PENDING") {
-      // Navegar a la ventana correspondiente para SUCCESS o 
       console.log(item.estado)
       router.push(`/success-or-pending/${item.orden}`);
     } else if (item.estado === "ERROR") {
-      // Navegar a la ventana correspondiente para ERROR
       router.push(`/error/${item.orden}`);
       console.log(item.estado)
     }
@@ -177,7 +189,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
       {!hola && (
         <>
           {!isTable ? (
-            <VStack overflow="auto" w="100%" bgColor="white" height="500" justify='flex-start' alignItems="flex-start">
+            <VStack border="1px" borderColor="gray.300" className=" rounded-2xl" overflow="auto" w="100%" bgColor="white" height="100%" justify='flex-start' alignItems="flex-start">
               <Flex w="100%" className="mt-2 mb-1" justify="space-between" align="center">
                 <HStack ml={2}>
                   <Input
@@ -215,11 +227,11 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
                   <option value="EN PROCESO">En Proceso</option>
                   <option value="RECHAZADO">Rechazados</option>
                 </Select>
-                <Button onClick={() => setisTable(true)} colorScheme='teal' backgroundColor='#F1D803'>
+                <Button mr="2" onClick={() => setisTable(true)} colorScheme='teal' backgroundColor='#F1D803'>
                   <AddIcon w={5} h={5} color='black' />
                 </Button>
               </Flex>
-              <HStack whiteSpace="nowrap" className="rounded-2xl" justifyContent='center' alignItems="center" bg="gray.200" w="100%" h="10%">
+              <HStack  borderColor="gray.300"  whiteSpace="nowrap" className="rounded-2xl" justifyContent='center' alignItems="center" bg="gray.200" w="100%" h="10%">
                 <HStack bgColor="white" align="center" justify="center" w="100%" h="100%">
                   <HStack overflowX="clip" ml='3%' alignItems="center" justify="start" w="40%">
                     <Text className="font-bold" fontSize='100%'>orden </Text>
@@ -232,8 +244,15 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
                   </HStack>
                 </HStack>
               </HStack>
-              <Box bgColor="gray.200" overflowY='auto' w="100%" h="500">
-                <VStack>
+              <Box bgColor="gray.200" overflowY='auto' w="100%" h="100%">
+                {IsLoading && (
+                  <Box display="flex" justifyContent="center" alignItems="center" height="350" >
+                  <Spinner size="xl" />
+                  <Text ml={4}>Cargando datos...</Text>
+              </Box>
+                )}
+                {!IsLoading && (
+                  <VStack>
                   {filteredData.map((item) => (
                     <VStack w="100%" key={item.orden}>
                       <Button
@@ -246,7 +265,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
                         className="rounded-2xl"
                         bg="gray.200"
                         w="100%"
-                        h="50"
+                        h="10"
                       >
                         <HStack marginTop="1%" className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
                           <HStack ml="3%" alignItems="center" justify="start" w="40%">
@@ -258,12 +277,15 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
                           <HStack mr="3%" spacing={4} alignItems="center" justify="center" w="30%">
                             <Text
                               color={
-                                item.estado === "sucess" ? "green" :
+                                item.estado === "approved" ? "green" :
                                   item.estado === "pending" ? "yellow.500" : "red"
                               }
                               fontSize="100%"
                             >
-                              {item.estado}
+                              {item.estado === 'pending' && 'PENDIENTE'}
+                              {item.estado === 'approved' && 'APROBADO'}
+                              {item.estado === 'rejected' && 'RECHAZADO'}
+                              {item.estado !== 'pending' && item.estado !== 'approved' && item.estado !== 'rejected' && 'DESCONOCIDO'}
                             </Text>
                           </HStack>
                         </HStack>
@@ -271,39 +293,14 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState, onVisibilityC
                     </VStack>
                   ))}
                 </VStack>
+                )}
               </Box>
 
-              {Addtable && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-300">
-                  <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20">
-                    <h2 className="text-xl font-bold mb-4">Asociar factura</h2>
-                    <p className='font-medium text-lg text-gray-500'>Digite el orden de compra de la factura a asociar</p>
-                    <Input placeholder="Orden de Compra" />
-                    <HStack textAlign='center' justifyContent="center" alignItems='center'>
-                      <Button
-                        bg='red'
-                        textColor='white'
-                        className="mt-4 px-4 py-2 rounded"
-                        onClick={() => setAddtable(false)}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        backgroundColor="#F1D803"
-                        className="mt-4 px-4 py-2 rounded"
-                        onClick={() => { setisTable(true); setAddtable(false); }}
-                      >
-                        Buscar
-                      </Button>
-                    </HStack>
-
-                  </div>
-                </div>
-              )}
+              
             </VStack>
           ) : (
             
-            <Associate_invoice  sharedState={sharedState} updateSharedState={updateSharedState} />
+            <Associate_invoice setisTable={setisTable} isTable={isTable}   sharedState={sharedState} updateSharedState={updateSharedState} />
             
 
 

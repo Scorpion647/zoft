@@ -2,6 +2,7 @@
 import Image from "next/image";
 import AccessCardContainer from "@/app/_ui/components/accessCardContainer";
 import {Box} from '@chakra-ui/react'
+
 export default function AccessHero() {
     return (
         <>

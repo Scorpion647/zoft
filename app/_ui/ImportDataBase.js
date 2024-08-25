@@ -4,11 +4,10 @@ import { useState, useCallback, useEffect } from "react";
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
 import Handsontable from 'handsontable';
-import { Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress } from '@chakra-ui/react';
+import { Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress, Spinner } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
 import { insertMaterial, insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial } from '@/app/_lib/database/service'; 
-import { Search } from 'handsontable/plugins';
-import { Domain } from 'domain';
+
 
 const initialData = {
   materials: Array(20).fill().map(() => ['', '', '', '']),
@@ -23,15 +22,16 @@ const headers = {
 };
 
 export const ImportDataBase = () => {
-;
+
   const [data1, setData1] = useState(Array(40).fill().map(() => Array(4).fill('')));
+  const [isLoading, setisloading] = useState(false);
   const [data, setData] = useState(initialData.records);
   const [excelData, setExcelData] = useState([]);
   const [tableHeaders, setTableHeaders] = useState(headers.records);
   const [selectedTable, setSelectedTable] = useState('records');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [workbook, setWorkbook] = useState(null);  // Removed TypeScript type annotation
+  const [workbook, setWorkbook] = useState(null);  
   const [showDatabaseData, setShowDatabaseData] = useState(true);
   const toast = useToast();
   const [Buttons, setButtons] = useState(true);
@@ -72,8 +72,8 @@ export const ImportDataBase = () => {
           }
         });
   
-        setExcelData(rows);  // Guarda los datos en el estado excelData
-        setData(rows);  // También actualiza el estado data para la vista previa
+        setExcelData(rows);  
+        setData(rows);  
         setShowDatabaseData(false);
       } catch (error) {
         console.error('Error reading Excel file:', error);
@@ -87,7 +87,6 @@ export const ImportDataBase = () => {
   const validateAndInsertData = async () => {
     setIsProcessing(true);
   
-    // Cargar los datos existentes de la base de datos para comparación
     let existingRecords = [];
     let existingMaterials = [];
     let existingSuppliers = [];
@@ -96,7 +95,7 @@ export const ImportDataBase = () => {
       if (selectedTable === 'records') {
         existingRecords = await getRecords(1, 1000);
       } else if (selectedTable === 'materials') {
-        existingMaterials = await getMaterials(1, 4000);
+        existingMaterials = await getMaterials(1, 40000);
       } else if (selectedTable === 'suppliers') {
         existingSuppliers = await getSuppliers(1, 100);
       }
@@ -104,7 +103,6 @@ export const ImportDataBase = () => {
       console.error('Error fetching existing data:', error);
     }
   
-    // Procesar los datos del archivo Excel
     const invalidMaterialEntries = [];
     const invalidSupplierEntries = [];
   
@@ -125,66 +123,33 @@ export const ImportDataBase = () => {
           currency
         ] = row;
   
-        // Verificar si el registro ya existe
         const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.position === position && record.material_code === material_code);
         let materialExists = false;
         let supplierExists = false;
         let supplierId = 0;
   
-        // Verificar si el material y proveedor existen
-        try {
-          const material = await getMaterial({ material_code });
-          materialExists = !!material;
-  
-          const suppliers = await getSuppliers(1, 100);
-          if (suppliers && Array.isArray(suppliers)) {
-            const supplier = suppliers.find(supplier => supplier.name === supplier_name);
-            if (supplier) {
-              supplierExists = true;
-              supplierId = supplier.id;
-            }
-          }
-        } catch (error) {
-          console.error('Error validating data:', error);
-        }
   
         if (!materialExists) {
           invalidMaterialEntries.push(i + 1);
         }
         if (!supplierExists) {
-          const userResponse = window.confirm(`El proveedor ${supplier_name} no existe. ¿Deseas crear uno nuevo?`);
-          if (userResponse) {
-            const domain = prompt(`Introduce el dominio para el proveedor ${supplier_name}:`);
-            if (domain) {
-              // Aquí puedes implementar la función para verificar si el dominio ya existe
-              const domainExists = await getSupplier("", domain);
-              if (domainExists.domain !== undefined) {
-                alert(`El dominio ${domain} ya está en uso. Introduce un dominio diferente.`);
-                i--; // Vuelve a intentar la inserción de este registro
-                continue;
+
+              const domainExists = await getSupplier("","",supplier_name);
+              if (domainExists.name === supplier_name) {
+              supplierExists = true;
+
               } else {
-                const newSupplier = await insertSupplier({ domain: domain, name: supplier_name });
-                if (newSupplier) {
+                const newSupplier = await insertSupplier({ name: supplier_name });
                   supplierExists = true;
-                  supplierId = newSupplier.id;
-                } else {
-                  alert('Error al crear el nuevo proveedor.');
-                  i--; // Vuelve a intentar la inserción de este registro
-                  continue;
-                }
-              }
-            } else {
-              alert('El dominio es obligatorio para crear un proveedor.');
-              i--; // Vuelve a intentar la inserción de este registro
-              continue;
-            }
-          } else {
-            invalidSupplierEntries.push(i + 1);
-            continue; // Pasa al siguiente registro sin intentar la inserción
+
+
           }
+          const verifi = await getSupplier("","",supplier_name);
+                console.log(verifi.id)
+                  supplierId = verifi.id; 
         }
   
-        if (materialExists && supplierExists) {
+        if (supplierExists) {
           const args = {
             item: position,
             quantity: Number(quantity),
@@ -199,20 +164,16 @@ export const ImportDataBase = () => {
             net_price: parseFloat(net_price * 100).toFixed(0),
           };
 
-            // Insertar nuevo registro
             try {
               const result = await insertRecord(args);
               console.log('Record inserted successfully:', result);
             } catch (error) {
-              // Asegúrate de mostrar el mensaje del error
               console.error('Error processing data:', error.message);
             
-              // Muestra detalles del error si están disponibles
               if (error.details) {
                 console.error('Error details:', error.details);
               }
             
-              // Muestra el stack trace del error para depuración adicional
               console.error('Error stack trace:', error.stack);
             }
           
@@ -224,7 +185,7 @@ export const ImportDataBase = () => {
         const args = { code, subheading };
         if(type === "national" || type === "foreign"){
           args.type = type
-        }else if(type === "NACIONAL"){
+        }else if(type === "NACIONAL" || type === "NACIONALIZADO"){
           args.type = "national"
         }else if(type === "EXTRANJERO"){
           args.type = "foreign"
@@ -260,7 +221,6 @@ export const ImportDataBase = () => {
             console.log("todo esta bien por aqui")
           }
         } else {
-          // Insertar nuevo material
           
           try {
             const result = await insertMaterial(args);
@@ -280,10 +240,8 @@ export const ImportDataBase = () => {
         const args = { domain, name };
   
         if (existingSupplier) {
-          // Aquí puedes implementar la lógica para actualizar el proveedor existente si es necesario
           console.log('Updating supplier:', args);
         } else {
-          // Insertar nuevo proveedor
           try {
             const result = await insertSupplier(args);
             if (result instanceof Error) {
@@ -349,25 +307,23 @@ const getsuplier = async (record) => {
 
 
   const fetchData = async () => {
+    setisloading(true)
     try {
       if (selectedTable === 'records') {
         const records = await getRecords(1, 1000);
         
         if (records) {
-          // Obtén los IDs de proveedores únicos de los registros
           const supplierIds = [...new Set(records.map(record => record.supplier_id))];
   
-          // Recupera los nombres de los proveedores en paralelo
           const suppliers = await Promise.all(supplierIds.map(id => getSupplier(id)));
   
-          // Crea un mapa para acceder fácilmente a los nombres de proveedores por su ID
           const supplierMap = suppliers.reduce((acc, supplier) => {
             acc[supplier.id] = supplier.name;
             return acc;
           }, {});
   
-          // Mapea los registros para incluir el nombre del proveedor
           const formattedRecords = records.map(record => [
+            
             record.purchase_order,
             record.item,
             record.material_code,
@@ -376,7 +332,7 @@ const getsuplier = async (record) => {
             record.measurement_unit,
             record.unit_price,
             record.net_price,
-            supplierMap[record.supplier_id] || '', // Usa el nombre del proveedor o una cadena vacía si no se encuentra
+            supplierMap[record.supplier_id] || '', 
             record.currency
           ]);
   
@@ -404,6 +360,8 @@ const getsuplier = async (record) => {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      setisloading(false)
     }
   };
 
@@ -418,7 +376,7 @@ const getsuplier = async (record) => {
     if (!checked && workbook) {
       fetchData(); 
     } else if (checked) {
-      setData(excelData);  // Usa los datos del archivo Excel almacenado
+      setData(excelData);  
     }
   };
   
@@ -453,9 +411,17 @@ const getsuplier = async (record) => {
         </HStack>
         {isProcessing && <Progress  colorScheme="teal" value={progress} />}
       </Box>
-      <Box width="100%" height="400" overflow="auto">
-        <HotTable
+      <Box width="100%" height="400" >
+        {isLoading && (
+          <Box display="flex" justifyContent="center" alignItems="center" height="400">
+          <Spinner size="xl" />
+          <Text ml={4}>Obteniendo Base de datos...</Text>
+          </Box>  
+        )}
+        {!isLoading && (
+          <HotTable
           data={data}
+          className="relative z-0"
           colHeaders={tableHeaders}
           rowHeaders={true}
           width="100%"
@@ -507,6 +473,7 @@ const getsuplier = async (record) => {
               : undefined
           }
         />
+        )}
       </Box>
     </>
   );

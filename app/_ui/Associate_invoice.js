@@ -1,11 +1,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
-import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
+import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
-import { getRecords, getMaterial, getMaterials, getRecordsInfo, getSupplier, insertRecordInfo, getRecord, updateMaterial } from '@/app/_lib/database/service';
+import { getRecords, getMaterial, getMaterials, getRecordsInfo, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord } from '@/app/_lib/database/service';
+import { TbRuler2Off } from "react-icons/tb";
+import { GiButterflyKnife } from "react-icons/gi";
 
 
 
@@ -18,8 +20,7 @@ function formatMoney(amount) {
     });
   }
 
-export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
-
+export const Associate_invoice = ({ setisTable, isTable, sharedState, updateSharedState }) =>{
 
 
 
@@ -80,23 +81,19 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
       };
     
       function cleanAndFormatNumber (value) {
-        // Eliminar el símbolo de dólar
+
         let cleanedValue = value.replace('$', '');
     
-        // Quitar los puntos (por ejemplo, de miles)
+
         cleanedValue = cleanedValue.replace(/\./g, '');
     
-        // Cambiar las comas por puntos
+
         cleanedValue = cleanedValue.replace(',', '.');
     
         return cleanedValue;
     }
     
-    // Ejemplo de uso
-    const rawValue = "$1.234,56";
-    const formattedValue = cleanAndFormatNumber(rawValue);
     
-    console.log(formattedValue); // "1234.56"
     
     
       
@@ -184,20 +181,9 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
       const [isHovered, setIsHovered] = useState(false);
       const buttonRef = useRef(null);
     
-      
     
     
-    
-    
-    
-      const [inputValue, setInputValue] = useState('');
-      const [filteredValue, setFilteredValue] = useState('');
-      const [selectedStatus, setSelectedStatus] = useState('EN PROCESO');
-      const [selectedMonth, setSelectedMonth] = useState('');
-      const [isTable, setisTable] = useState(false);
-    
-    
-    
+
       const handleOrderNumberChange = (e) => {
         setOrderNumber(e.target.value);
       };
@@ -217,6 +203,7 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
         const currentValue = sharedState.TRM;
         console.log(sharedState.TRM)
         updateSharedState('TRM', !currentValue);
+
         console.log(sharedState.TRM)
     };
     
@@ -225,114 +212,222 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
       
     
       function handleChange(value) {
-       // Paso 1: Si el valor está vacío, devolverlo tal cual
        if (!value) {
         return '';
     }
-    
-    // Paso 2: Eliminar el símbolo de dólar y los espacios
     let formattedValue = value.replace(/[\$\s]/g, '');
     
-    // Paso 3: Reemplazar comas por puntos
     formattedValue = formattedValue.replace(/\./g, '').replace(/,/g, '.');
     
-    // Paso 4: Verificar si el valor tiene un solo punto con exactamente dos decimales
     const decimalMatch = formattedValue.match(/^(\d+)\.(\d{2})$/);
     
     if (decimalMatch) {
-        // Si los dos decimales son "00", eliminar el punto y los decimales
         if (decimalMatch[2] === '00') {
             return decimalMatch[1];
         }
-        // Si ya tiene dos decimales y no hay más cambios, retornarlo como está
         return formattedValue;
     }
     
-    // Paso 5: Mover el punto a la posición correcta si hay más de dos dígitos decimales
     const splitValue = formattedValue.split('.');
     let intValue = splitValue[0];
     let decimalValue = splitValue[1] || '';
     
-    // Asegurarse de que solo haya dos decimales
     if (decimalValue.length > 2) {
         decimalValue = decimalValue.slice(0, 2);
     } else if (decimalValue.length < 2) {
         decimalValue = decimalValue.padEnd(2, '0');
     }
     
-    // Construir el valor formateado
     formattedValue = `${intValue}.${decimalValue}`;
     
-    // Paso 6: Si los dos decimales son "00", eliminar el punto y los decimales
     if (decimalValue === '00') {
         return intValue;
     }
     
     return formattedValue;
     }
-    
+    const debounceTimeoutRef = useRef(null);
+    const debounceTimeoutRef1 = useRef(null);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    useEffect(() => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+  
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (orderNumber) {
+          clearRowsWithValuesInColumn0();
+        }
+      }, 700); 
+  
+      return () => {
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
+      };
+    }, [orderNumber, sharedState.TRM]); 
 
 
 
 
 
     useEffect(() => {
-        if (orderNumber.trim() !== '') {
-          setIsLoading(true);
-      
-          // Llama a la función de la base de datos
-          getRecords(1, 10000) // Ajusta el parámetro para obtener todos los registros posibles
-            .then((data) => {
-              if (Array.isArray(data)) {
-                // Filtra los registros para encontrar coincidencias parciales
-                const matchingRecords = data
-                  .map(record => record.purchase_order)
-                  .filter((value, index, self) => 
-                    self.indexOf(value) === index && value.includes(orderNumber) // Verifica si `orderNumber` está incluido en `purchase_order`
-                  );
-      
-                // Si hay más de 4 registros, muestra los primeros 4 y cuenta los restantes
-                if (matchingRecords.length > 4) {
-                  setSuggestions(matchingRecords.slice(0, 4));
-                  setRemainingCount(matchingRecords.length - 4);
+      if (debounceTimeoutRef1.current) {
+        clearTimeout(debounceTimeoutRef1.current);
+      }
+  
+      debounceTimeoutRef1.current = setTimeout(() => {
+        if (orderNumber) {
+       
+          if (orderNumber.trim() !== '') {
+            setIsLoading(true);
+        
+            getRecords(1, 10000) 
+              .then((data) => {
+                if (Array.isArray(data)) {
+                  const matchingRecords = data
+                    .map(record => record.purchase_order)
+                    .filter((value, index, self) => 
+                      self.indexOf(value) === index && value.includes(orderNumber) 
+                    );
+        
+                  if (matchingRecords.length > 4) {
+                    setSuggestions(matchingRecords.slice(0, 4));
+                    setRemainingCount(matchingRecords.length - 4);
+                  } else {
+                    setSuggestions(matchingRecords);
+                    setRemainingCount(0);
+                  }
                 } else {
-                  setSuggestions(matchingRecords);
+                  setSuggestions([]);
                   setRemainingCount(0);
                 }
-              } else {
-                setSuggestions([]);
-                setRemainingCount(0);
-              }
-            })
-            .finally(() => {
-              setIsLoading(false);
-            });
-        } else {
-          setSuggestions([]);
-          setRemainingCount(0);
+              })
+              .finally(() => {
+                setIsLoading(false);
+              });
+          } else {
+            setSuggestions([]);
+            setRemainingCount(0);
+          }
         }
-      }, [orderNumber]);
+      }, 700);
+      return () => {
+        if (debounceTimeoutRef1.current) {
+          clearTimeout(debounceTimeoutRef1.current);
+        }
+      };
+    }, [orderNumber]); 
+
+    
+
+    const clearRowsWithValuesInColumn0 = async () => {
+      const hot = hotTableRef.current.hotInstance;
+      const data = hot.getData();
+  
+      for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+          const row = data[rowIndex];
+          const pos = row[0];
+  
+          try {
+              if (!orderNumber || pos == null) {
+                  console.warn('Parámetros inválidos:', { orderNumber, pos });
+                  continue;
+              }
+  
+              const records = await getRecord(orderNumber, pos);
+              const revi = await getRecord(orderNumber,1)
+              
+              
+  
+              if (records && !('message' in records)) {
+                  const hola = Number(records.item);
+                  const hola1 = Number(revi.item);
+                  console.log("este es el item:",hola1)
+                  if (row[0]) {
+                      if(hola === Number(row[0])){
+                        const { material_code, unit_price, quantity } = records;
+                      if (quantity > 0) {
+                          const materialDetails = await getMaterial(material_code);
+                          const subheading = materialDetails?.subheading || '';
+  
+                          hot.setDataAtRowProp(rowIndex, 1, material_code);
+  
+                          if (subheading !== "" && subheading !== undefined && subheading !== null && subheading !== NaN && subheading !== 0 && subheading !== " ") {
+                              hot.setDataAtRowProp(rowIndex, 5, "**********");
+                          } else {
+                              hot.setDataAtRowProp(rowIndex, 5, subheading);
+                          }
+                          if(sharedState.TRM){
+                            hot.setDataAtCell(rowIndex, 3, String(unit_price));
+                          }else {
+                            hot.setDataAtCell(rowIndex, 3, "");
+                            hot.setDataAtCell(rowIndex, 4, "");
+                          }
+                          
+                      }
+                      } else if(hola1 === 1){
+                          hot.setDataAtCell(rowIndex, 0, ""); 
+                      }
+                  } 
+              } else {
+                  console.log('Error en records:');
+              }
+          } catch (error) {
+              console.log('Error en el procesamiento de fila:');
+          }
+      }
+  };
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+  
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
 
 
@@ -346,135 +441,91 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
         { data: 5, readOnly: false, title: 'Subpartida ' },
       ];
 
-    const handleCellDoubleClick = async (event, coords, TD) => {
+      const handleCellDoubleClick = async (event, coords, TD) => {
         const currentTime = new Date().getTime();
-        const doubleClickThreshold = 300;
         const cellValue = data[coords.row]?.[coords.col]?.toString().trim();
         const pos = data[coords.row]?.[0]?.toString().trim();
-        const quanti = parseInt(data[coords.row]?.[2]?.toString().trim());
-    
-    
+        const quanti = parseInt(data[coords.row]?.[2]?.toString().trim(), 10);
     
         const records = await getRecords(1, 150, orderNumber);
     
+        if (Array.isArray(records)) {   
+            const matchedRecord = records.find(record =>
+                record.purchase_order.trim() === orderNumber.trim() &&
+                record.item.toString().trim() === pos
+            );
     
-        
+            if (matchedRecord) {
+                const { material_code, currency, description, supplier_id, quantity } = matchedRecord;
+                const unit_price = convertCommaToDot(data[coords.row]?.[3]?.toString().trim());
+                const supplier = await getSupplier(supplier_id);
+
+                updateSharedState('descripcion', description);
+                updateSharedState('proveedor', supplier.name);
+                updateSharedState('cantidadoc', quantity);
+                updateSharedState('preciouni', unit_price);
+                updateSharedState('moneda', currency);
     
-        if (Array.isArray(records)) {
-          const matchedRecord = records.find(record =>
-            record.purchase_order.trim() === orderNumber.trim() &&
-            record.item.toString().trim() === pos
-          );
+                const factorPrice = sharedState.TRM
+                    ? unit_price * sharedState.valorTRM
+                    : unit_price;
     
-          if (matchedRecord) {
-            const { material_code, currency, description, supplier_id, quantity } = matchedRecord;
-            const unit_price = convertCommaToDot(data[coords.row]?.[3]?.toString().trim());
-            const supplier = await getSupplier(supplier_id)
-            updateSharedState('descripcion', description)
-            updateSharedState('proveedor', supplier.name)
-            updateSharedState('cantidadoc', quantity)
-            updateSharedState('preciouni', (unit_price ))
-            updateSharedState('moneda', currency)
-            if (sharedState.TRM) {
-              if ((((unit_price ) * sharedState.valorTRM) * quanti).toFixed(2) !== NaN && (unit_price ) !== "") {
+                const totalPrice = factorPrice * quanti;
     
-                updateSharedState('factunit', ((unit_price ) * sharedState.valorTRM))
-                updateSharedState('facttotal', (((unit_price ) * sharedState.valorTRM) * quanti))
-              } else {
+                updateSharedState('factunit', factorPrice);
+                updateSharedState('facttotal', totalPrice || 0);
     
-                updateSharedState('factunit', 0)
-                updateSharedState('facttotal', 0)
-              }
+                const columnSum = sharedState.columnSum || 1; 
+                const percentage = ((data[coords.row]?.[2] || 0) / columnSum) * 100;
+    
+                updateSharedState('cantidadespor', percentage.toFixed(2));
+    
+                const pesoTotal = sharedState.pesototal || 0;
+                const pesoPor = (percentage * pesoTotal / 100).toFixed(2);
+                updateSharedState('pesopor', isNaN(pesoPor) ? 0 : pesoPor);
+    
+                const factor = (percentage * pesoTotal / 100 / (data[coords.row]?.[2] || 1)).toFixed(8);
+                updateSharedState('factor', factor);
+    
+                const bulto = (percentage * (sharedState.bultos || 0) / 100).toFixed(3);
+                updateSharedState('bulto', bulto);
             } else {
-              const uni = (((unit_price / 100)) * quanti).toFixed(2);
-              if (((((unit_price )) * quanti).toFixed(2)) !== "NaN" && (unit_price ) !== "" ) {
-                updateSharedState('factunit', ((unit_price )))
-                updateSharedState('facttotal', (((unit_price )) * quanti))
-              } else {
-                updateSharedState('factunit', 0)
-                updateSharedState('facttotal', 0)
-              }
+                updateSharedState('descripcion', "NaN");
+                updateSharedState('cantidadoc', 0);
+                updateSharedState('facttotal', 0);
             }
-            
     
+            const totalSum = data.reduce((sum, row) => {
+                const unip = parseFloat(row[3]) || 0;
+                const can = parseFloat(row[2]) || 0;
+                return unip > 0 && can > 0 ? sum + unip * can : sum;
+            }, 0);
     
-            if ((position != null) && (orderNumber.trim() !== '') && (material_code !== null)) {
-              if (coords.col === 0) {
+            updateSharedState('totalfactura', totalSum.toFixed(2));
     
-                // toggleCondition();
-              }
-            }
-            
-       
-          } else {
-            updateSharedState('descripcion', "NaN")
-            updateSharedState('cantidadoc', 0)
-            updateSharedState('facttotal', 0)
-          }
-    
+            updateSharedState('SelectedCellValue', cellValue);
+            setLastClickTime(currentTime);
         }
+    };
     
-        let totalSum = 0;
-    
-            for (let row = 0; row < data.length; row++) {
-              let tot = 0; // Reinicia tot en cada iteración
-              const unip = data[row][3];
-              const can = data[row][2];
-            
-              if (unip !== "" && can !== "" && unip !== 0 && can !== 0) {
-                if (sharedState.TRM) {
-                  tot = (unip * can).toFixed(2);
-                } else {
-                  tot = (unip * can).toFixed(2);
-                }
-              }
-            
-              // Solo sumar a totalSum si tot es un número válido
-              if (!isNaN(tot) && tot !== 0) {
-                totalSum += parseFloat(tot);
-              }
-            
-    
-            }
-            
-            updateSharedState('totalfactura', totalSum);
-    
-    
-    
-    
-        updateSharedState('cantidadespor', ((data[coords.row]?.[2]?.toString().trim() / sharedState.columnSum) * 100).toFixed(2));
-        if ((((((data[coords.row]?.[3]?.toString().trim() / sharedState.columnSum) * 100).toFixed(2)) * sharedState.pesototal) / 100).toFixed(2) !== "NaN") {
-          updateSharedState('pesopor', (((((data[coords.row]?.[2]?.toString().trim() / sharedState.columnSum) * 100).toFixed(2)) * sharedState.pesototal) / 100).toFixed(2));
-        } else {
-          updateSharedState('pesopor', 0)
-        }
-        updateSharedState('factor', (((((((data[coords.row]?.[2]?.toString().trim() / sharedState.columnSum) * 100)) * sharedState.pesototal) / 100)) / (data[coords.row]?.[2]?.toString().trim())).toFixed(8))
-        updateSharedState('bulto', (((((data[coords.row]?.[2]?.toString().trim() / sharedState.columnSum) * 100).toFixed(2)) * (sharedState.bultos)) / 100).toFixed(3))
-    
-    
-    
-        updateSharedState('SelectedCellValue', cellValue);
-        setLastClickTime(currentTime);
-    
-    
-      }
 
 
 
 
 
     
+      
 
-
-    const handleSubmit = async () => {
+      const handleSubmit = async () => {
         const hotInstance = hotTableRef.current?.hotInstance;
         if (!hotInstance) {
-          console.error('Handsontable instance has been destroyed or is not available.');
-          return;
+            console.error('Handsontable instance has been destroyed or is not available.');
+            return;
         }
     
         const tableData = hotInstance.getData();
         const records = [];
+        const update = [];
         const seenPositions = new Set();
         const duplicatePositions = new Map();
         const incompleteRows = [];
@@ -482,115 +533,133 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
         let hasCompleteRow = false;
     
         for (const [index, row] of tableData.entries()) {
-          const isEmptyRow = row.every(cell => cell === null || cell === '' || cell === undefined);
+            const isEmptyRow = row.every(cell => cell === null || cell === '' || cell === undefined);
     
-          if (isEmptyRow) continue;
+            if (isEmptyRow) continue;
     
-          const [record_position, material_code, billed_quantity,bill_number,, subheading] = row;
+            const [record_position, material_code, billed_quantity, bill_number,, subheading] = row;
     
-          if ((record_position !== "" && record_position !== NaN && record_position !== undefined && record_position !== null) && 
-          (material_code !== "" && material_code !== NaN && material_code !== undefined && material_code !== null) && 
-          (bill_number !== "" && bill_number !== NaN && bill_number !== undefined && bill_number !== null)
-           && (billed_quantity !== "" && billed_quantity !== NaN && billed_quantity !== undefined && billed_quantity !== null)
-            && (subheading !== "" && subheading !== NaN && subheading !== undefined && subheading !== null)  ) {
-            hasCompleteRow = true;
+            if ((record_position && material_code && bill_number && billed_quantity && subheading) !== undefined && (record_position && material_code && bill_number && billed_quantity && subheading) !== null) {
+                hasCompleteRow = true;
     
-            const pos = hotInstance.getDataAtCell(index, 0);
-            const matchedRecord = await getRecord(orderNumber,pos);
-                const { id, unit_price, material_code } = matchedRecord;
-                const material = await getMaterial(material_code)
-                if(material.subheading === 0 || material.subheading === null || material.subheading === undefined){
-                  const update = await updateMaterial(material_code, {subheading: hotInstance.getDataAtCell(index, 4)})
-                  if (update) {
-                    // Manejo del error
-                    console.log("error al actualizar el material")
-                  }
+                const pos = hotInstance.getDataAtCell(index, 0);
+                const matchedRecord = await getRecord(orderNumber, pos);
+    
+                if (!matchedRecord) {
+                    console.error(`No record found for position ${pos}`);
+                    continue;
                 }
+    
+                const { id, unit_price, material_code, quantity } = matchedRecord;
+                const material = await getMaterial(material_code);
+    
                 let factunitprice = 0;
                 let totalprice = 0;
-                  totalprice = (((parseFloat(hotInstance.getDataAtCell(index, 3)).toFixed(2))) * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
-                  factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
-                
+                totalprice = ((parseFloat(hotInstance.getDataAtCell(index, 3)).toFixed(2)) * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
+                factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
+    
                 let Trm = sharedState.TRMNUM;
                 const gross = ((((((hotInstance.getDataAtCell(index, 2)) / sharedState.columnSum) * 100)) * sharedState.pesototal) / 100).toFixed(2);
                 const packag = (((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * 100)) * (sharedState.bultos)) / 100).toFixed(3);
-                let conver = 0;
-                console.log(sharedState.TRM)
-                if(!sharedState.TRM){
-                  conver = 0;
-                  console.log("hay problemas en el paraiso")
-                }else{
-                  console.log("entramos")
-                  conver = 1;
-                }
-                
+                let conver = sharedState.TRM ? 1 : 0;
+    
                 if (seenPositions.has(record_position)) {
-                  if (!duplicatePositions.has(record_position)) {
-                    duplicatePositions.set(record_position, []);
-                  }
-                  duplicatePositions.get(record_position).push(index + 1);
+                    if (!duplicatePositions.has(record_position)) {
+                        duplicatePositions.set(record_position, []);
+                    }
+                    duplicatePositions.get(record_position).push(index + 1);
                 } else {
-                  seenPositions.add(record_position);
+                    seenPositions.add(record_position);
     
-     
-                  const record = {
-                    bill_number: sharedState.nofactura,
-                    billed_quantity,
-                    billed_total_price: parseInt(totalprice * 100),
-                    billed_unit_price: parseInt(factunitprice * 100),
-                    gross_weight: (gross),
-                    packages: (packag),
-                    record_id: id,
-                    trm: Trm,
-                    conversion: conver,
-                  };
+                    const record = {
+                        bill_number: sharedState.nofactura,
+                        billed_quantity,
+                        billed_total_price: parseInt(totalprice * 100),
+                        billed_unit_price: parseInt(factunitprice * 100),
+                        gross_weight: gross,
+                        packages: packag,
+                        record_id: id,
+                        trm: Trm,
+                        conversion: conver,
+                    };
     
-                  records.push(record);
-                
-              
+                    const purchase_order = orderNumber;
+                    const item = pos;
+                    const new_data = {
+                        quantity: quantity - billed_quantity,
+                    };
+    
+                    console.log("Prepared update record:", { purchase_order, item, new_data });
+    
+                    if (purchase_order && item && new_data) {
+                        update.push({ purchase_order, item, new_data });
+                    } else {
+                        console.error("Incomplete data for update:", { purchase_order, item, new_data });
+                    }
+    
+                    records.push(record);
                 }
-          } else {
-            incompleteRows.push(index + 1);
-          }
+            } else {
+                incompleteRows.push(index + 1);
+            }
         }
     
         if (incompleteRows.length > 0) {
-          alert(`Las siguientes filas están incompletas: ${incompleteRows.join(', ')}`);
-          return;
+            alert(`Las siguientes filas están incompletas: ${incompleteRows.join(', ')}`);
+            return;
         }
     
         if (!hasCompleteRow) {
-          alert('Debe haber al menos una fila completa.');
-          return;
+            alert('Debe haber al menos una fila completa.');
+            return;
         }
     
         if (duplicatePositions.size > 0) {
-          const duplicatesMsg = Array.from(duplicatePositions.entries())
-            .map(([pos, indices]) => `Posición ${pos}: Fila(s) ${indices.join(', ')}`)
-            .join('\n');
-          alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
-          return;
+            const duplicatesMsg = Array.from(duplicatePositions.entries())
+                .map(([pos, indices]) => `Posición ${pos}: Fila(s) ${indices.join(', ')}`)
+                .join('\n');
+            alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
+            return;
         }
     
         let success = true;
         for (const record of records) {
-          const result = await insertRecordInfo(record);
-          if (result instanceof Error) {
-            console.error(result);
-            alert(`Error al almacenar el registro para la posición ${record.record_position}: ${result.message}`);
-            success = false;
-          } else {
-            console.log(`Registro para la posición ${record.record_position} almacenado correctamente.`);
-          }
+            const result = await insertRecordInfo(record);
+            if (result instanceof Error) {
+                console.error(result);
+                alert(`Error al almacenar el registro para la posición ${record.record_position}: ${result.message}`);
+                success = false;
+            } else {
+                console.log("Updating record:", update);
+    
+                const { purchase_order, item, new_data } = update.shift();
+    
+                console.log("Before updateRecord - purchase_order:", purchase_order);
+                console.log("Before updateRecord - item:", item);
+                console.log("Before updateRecord - new_data:", new_data);
+    
+                const updat = await updateRecord(purchase_order, item, new_data);
+    
+                if (updat instanceof Error) {
+                    alert(`Error al actualizar el registro para la posición ${record.record_position}: ${updat.message}`);
+                    success = false;
+                } else {
+                    console.log(`Registro para la posición ${record.record_position} almacenado y actualizado correctamente.`);
+                }
+            }
         }
     
         if (success) {
-          setisTable(false);
-          alert('Registros enviados correctamente.');
+            setisTable(false);
+            alert('Registros enviados correctamente.');
         } else {
-          alert('Hubo errores al enviar los datos.');
+            alert('Hubo errores al enviar los datos.');
         }
-      };
+    };
+    
+    
+    
+    
 
 
 
@@ -600,8 +669,15 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
     return(
         <div className={`relative p-4 bg-gradient-to-tr from-gray-200 to-gray-300 border h-full border-gray-300 text-center rounded-3xl shadow-md flex flex-col`}>
 
-              <HStack position="relative" width="100%" height="100px" className=" ">
+              <HStack position="relative" width="100%" height="20%" >
+                
                 <VStack width="25%">
+                <HStack width="100%" height="20px" textAlign="start" align="start" justify="start">
+                <Button  onClick={() => setisTable(false)} width="30%" height="100%"  colorScheme='teal' backgroundColor='#F1D803'>
+                        <ArrowBackIcon w={3} h={3} color='black' />
+                      </Button>
+            
+                  </HStack>
                   <HStack>
                     <Input
                       border='1px'
@@ -683,7 +759,7 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
 
                 </VStack>
               </HStack>
-              <HStack spacing={3}>
+              <HStack height="7%" spacing={3}>
                 <HStack padding="1"  spacing={3} width="60%"><Text className=" font-bold  "  fontSize="90%">Proveedor</Text><Text fontSize="90%">{sharedState.proveedor}</Text>
             </HStack>
                 
@@ -692,66 +768,58 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                 <Text  fontSize="90%">{formatMoney(sharedState.totalfactura)}</Text>
                 </HStack>
                 </HStack>
-              <Box>
+              <Box height="68%" width="100%" overflow="auto" >
                 <HotTable
                   ref={hotTableRef}
                   className="relative z-0"
                   data={data}
-                  colWidths={[50, 150, 50, 110, 110 , 100,]} // Ancho específico para cada columna
-                  rowHeaders={true}
-                  width="100%"
-                  height="300"
+                  colWidths={[50, 150, 50, 110, 110 , 100]}
+                  rowHeaders={false}     
                   licenseKey="non-commercial-and-evaluation"
                   columns={columns}
                   stretchH='all'
                   dropdownMenu={true}
                   copyPaste={true}
+                  manualColumnResize={true}
+                  manualRowResize={true}
                   hiddenColumns={{ indicators: true }}
                   afterOnCellMouseDown={handleCellDoubleClick}
                   afterRenderer={(TD, row, col, prop, value, cellProperties) => {
 
-                    if (col === 3) { 
-       
-                      TD.style.backgroundColor = ''; 
-                      TD.title = '';
-                  
-                  
-                      if (value > 10) {
-                        value
-                        TD.title = 'Este valor es mayor a 10'; 
-                        
-                      }
-                    }
+                    
                   }}
                   beforeChange={(changes, source) => {
                     const hot = hotTableRef.current.hotInstance;
+                    
                     if (changes) {
-                        for (const change of changes) {
-                            calculateColumnSum();
-                            const [row, col, oldValue, newValue] = change;
-                            const hot = hotTableRef.current.hotInstance;
+                        hot.batch(() => {
+                            for (const change of changes) {
+                                const [row, col, oldValue, newValue] = change;
                 
-                            if (col === 3) {
-                                // Aplica la función de formateo al valor ingresado
-                                const formattedValue = handleChange(newValue);
-                
-                                // Verificar si el valor formateado cumple con las condiciones
-                                if (formattedValue !== newValue) {
-                                    // Verificar si `change` existe y es un array
-                                    if (Array.isArray(change) && change.length > 3) {
-                                        change[3] = formattedValue;  // Cambia el valor de la celda con el valor formateado
-                                    } else {
-                                        console.error("Formato de `change` inesperado o inválido", change);
+                                calculateColumnSum();
+                                
+                                if (col === 3) {
+                                    const formattedValue = handleChange(newValue);
+                                    if (formattedValue !== newValue) {
+                                        if (Array.isArray(change) && change.length > 3) {
+                                            change[3] = formattedValue;
+                                        } else {
+                                            console.error("Formato de `change` inesperado o inválido", change);
+                                        }
                                     }
                                 }
-                                
+                
+                                if (col === 0) {
+                                    if (newValue === undefined || newValue === "" || newValue === NaN || newValue === null) {
+                                        hot.setDataAtRowProp(row, 1, "");
+                                        hot.setDataAtRowProp(row, 2, "");
+                                        hot.setDataAtRowProp(row, 3, "");
+                                        hot.setDataAtRowProp(row, 4, "");
+                                        hot.setDataAtRowProp(row, 5, "");
+                                    }
+                                }
                             }
-                            if(col === 2){
-                              
-                            }
-                            
-                            
-                        }
+                        });
                     }
                 
                     return true;
@@ -765,25 +833,22 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                     const reset = { backgroundColor: '' }; 
 
 
-                    // Establece la celda como editable o no editable según la lógica
-                    if (col === 5) { // Supongamos que el subheading está en la columna 4
+     
+                    if (col === 5) { 
 
 
                       if (data[row][0] !== "" && (data[row][1] !== undefined && data[row][1] !== "" && data[row][1] !== NaN) && data[row][5].length !== 10) {
                         cellProperties.readOnly = false
                         
                         cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
-                          // Llama al renderer de texto base de Handsontable
+
                           Handsontable.renderers.TextRenderer(hotInstance, td, row, col, prop, value, cellProperties);
-                          // Aplica el estilo a la celda
                           td.style.backgroundColor = readonlyStyle.backgroundColor;
                           td.title = 'Subpartida no existe, por favor digite una de 10 digito'; 
                         };
                       } else {
                         cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
-                          // Llama al renderer de texto base de Handsontable
                           Handsontable.renderers.TextRenderer(hotInstance, td, row, col, prop, value, cellProperties);
-                          // Aplica el estilo a la celda
                           td.style.backgroundColor = reset.backgroundColor;
                           td.title = ''; 
                         };
@@ -796,9 +861,7 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                       if (data[row][0] !== "" && (data[row][1] !== undefined || data[row][1] !== "" || data[row][1] !== NaN) && data[row][5].length !== 10 && data[row][5].length !== 0) {
 
                         cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
-                          // Llama al renderer de texto base de Handsontable
                           Handsontable.renderers.TextRenderer(hotInstance, td, row, col, prop, value, cellProperties);
-                          // Aplica el estilo a la celda
                           td.style.backgroundColor = editableStyle.backgroundColor;
                         };
                       }
@@ -807,15 +870,13 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                     if (col === 0) {
                       if (data[row][0] !== "" && data[row][1] === undefined && data[row][0] !== undefined && data[row][0] !== NaN && data[row][0] !== null) {
                         cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
-                          // Llama al renderer de texto base de Handsontable
                           Handsontable.renderers.TextRenderer(hotInstance, td, row, col, prop, value, cellProperties);
-                          // Aplica el estilo a la celda
                           td.style.backgroundColor = readonlyStyle.backgroundColor;
                           td.title = 'Posicion no registrada'; 
                         };
                       }
                     }
-                    if(col === 2 || col == 3){
+                    if(col === 2 || (col === 3 && sharedState.TRM === false)){
                       if(data[row][1] !== "" && data[row][1] !== NaN && data[row][1] !== undefined && data[row][1] !== null){
                         cellProperties.readOnly = false
 
@@ -823,73 +884,90 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                         cellProperties.readOnly = true
                       }
                     }
+                    if(col === 3 && sharedState.TRM === true){
+                      cellProperties.readOnly = true
+                    }
 
                     return cellProperties;
                   }}
                   afterChange={async (changes, source) => {
+                    
+              
+
                     if (source === 'edit' || source === 'CopyPaste.paste') {
-                      const hot = hotTableRef.current.hotInstance;
-
-                      // Mapa para agrupar los cambios por fila
-                      const changesByRow = new Map();
-                      
-                      for (const change of changes) {
-                        const [row, col, oldValue, newValue] = change;
-                        const cellValue = newValue?.toString().trim();
-
-                        
-
-                        if (col === 0 && position != null && orderNumber.trim() !== '') {
-                          changesByRow.set(row, cellValue);
-                        }
-                        if(col === 2 || col === 3 && (data[row][0] !== 0 && data[row][0] !== "" && data[row][0] !== NaN && data[row][0] !== null && data[row][0] !== undefined) &&  (data[row][3] !== 0 && data[row][3] !== "" && data[row][3] !== NaN && data[row][3] !== undefined && data[row][3] !== null) ){
-                          if (!isNaN(data[row][2]) && !isNaN(data[row][3])) { // Verifica que ambos valores sean números
-                            const result = data[row][2] * data[row][3]; // Realiza la operación (en este caso, suma)
-                            hot.setDataAtRowProp(row, 4, formatMoney(parseFloat(result).toFixed(2))); // Establece el resultado en la Columna 3
-                          } else {
-                            hot.setDataAtRowProp(row, 4, ''); // Si no son números, limpia el valor
-                          }
-                        }
-                      }
-                      
-
-                      // Procesar todos los cambios agrupados por fila
-                      for (const [row, cellValue] of changesByRow.entries()) {
-                        try {
-                          const pos = data[row][0];
-                          const records = await getRecord(orderNumber, pos);
-
-                          if (records) {
-                            const { material_code, unit_price } = records;
-                            const materialDetails = await getMaterial(material_code);
-                            const subheading = materialDetails?.subheading || '';
-
-                            // Configura la celda como editable o no editable
-                            hot.setCellMeta(row, 5, 'readOnly', !subheading);
-
-                            hot.setDataAtRowProp(row, 1, material_code);
-                            
-                            if(subheading !== "" && subheading !== undefined && subheading !== null && subheading !== NaN && subheading !== 0 && subheading !== " "){
-                              hot.setDataAtRowProp(row, 5, "**********");
-                            }else{
-                              hot.setDataAtRowProp(row, 5, subheading);
+                        const hot = hotTableRef.current.hotInstance;
+                
+                        const changesByRow = new Map();
+                
+                        for (const change of changes) {
+                            const [row, col, oldValue, newValue] = change;
+                            const cellValue = newValue?.toString().trim();
+                
+                            if (col === 0 && position != null && orderNumber.trim() !== '') {
+                                changesByRow.set(row, cellValue);
+                            }
+                
+                            if ((col === 2 || col === 3) &&
+                                (data[row][0] !== 0 && data[row][0] !== "" && data[row][0] !== NaN && data[row][0] !== null) &&
+                                (data[row][3] !== 0 && data[row][3] !== "" && data[row][3] !== NaN && data[row][3] !== undefined && data[row][3] !== null)
+                            ) {
+                                if (!isNaN(data[row][2]) && !isNaN(data[row][3])) {
+                                    const result = data[row][2] * data[row][3];
+                                    hot.setDataAtRowProp(row, 4, formatMoney(parseFloat(result).toFixed(2)));
+                                } else {
+                                    hot.setDataAtRowProp(row, 4, '');
+                                }
                             }
                             
-
-                            setfactunitprice(unit_price);
-                            setfacttotalvalue(cellValue * unit_price);
-                          } else {
-                            console.warn(`No matching record found for row ${row}`);
-                          }
-                        } catch (error) {
-                          console.error(`Error processing records for row ${row}:`, error);
+                    
                         }
-                      }
+                
+                        const promises = [];
+                
+                        for (const [row, cellValue] of changesByRow.entries()) {
+                            promises.push((async () => {
+                                try {
+                                    const pos = data[row][0];
+                                    const records = await getRecord(orderNumber, pos);
+                
+                                    if (Number(records.item) === Number(pos)) {
+                                        const { material_code, unit_price, quantity } = records;
+                                        if (quantity > 0) {
+                                            const materialDetails = await getMaterial(material_code);
+                                            const subheading = materialDetails?.subheading || '';
+                
+                                            hot.setCellMeta(row, 5, 'readOnly', !subheading);
+                                            hot.setDataAtRowProp(row, 1, material_code);
+                
+                                            if (subheading !== "" && subheading !== undefined && subheading !== null && subheading !== NaN && subheading !== 0 && subheading !== " ") {
+                                                hot.setDataAtRowProp(row, 5, "**********");
+                                            } else {
+                                                hot.setDataAtRowProp(row, 5, subheading);
+                                            }
+                                            if(sharedState.TRM === true){
+                                              hot.setDataAtCell(row, 3, String(unit_price));
+                                            }else {
+                                              hot.setDataAtCell(row, 3, "");
+                                              hot.setDataAtCell(row, 4, "");
+                                              
+                                            }
 
-                      
-
+                
+                                            setfactunitprice(unit_price);
+                                            setfacttotalvalue(cellValue * unit_price);
+                                        }
+                                    } else {
+                                        console.warn(`No matching record found for row ${row}`);
+                                    }
+                                } catch (error) {
+                                    console.error(`Error processing records for row ${row}:`, error);
+                                }
+                            })());
+                        }
+                
+                        await Promise.all(promises);
                     }
-                  }}
+                }}
 
 
 
@@ -930,7 +1008,7 @@ export const Associate_invoice = ({ sharedState, updateSharedState }) =>{
                   }}
                 />
               </Box>
-              <Button mt={1} height="5%" onClick={handleSubmit}>Asociar</Button>
+              <Button  mt={1} height="5%" onClick={handleSubmit}>Asociar</Button>
             </div>
     );
 }

@@ -23,7 +23,6 @@ export const CreatelargeDomain = () => {
             if (data) {
                 setSuppliers(data);
 
-                // Verifica si hay una siguiente página
                 const nextPageData = await getSuppliers(currentPage + 1, 5, search);
                 setHasNextPage(nextPageData.length > 0);
             } else {

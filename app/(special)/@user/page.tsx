@@ -1,9 +1,10 @@
 'use client'
 import { useState } from "react";
 import { redirect, useRouter } from "next/navigation";
-import { Box, Stack, HStack, VStack, Button,  Text, Heading, ChakraProvider, Menu, MenuButton, MenuList, MenuItem,  Input,} from "@chakra-ui/react";
-import { HamburgerIcon, SmallCloseIcon, DeleteIcon, RepeatClockIcon, LinkIcon } from "@chakra-ui/icons";
+import { Flex,Box, Stack, HStack, VStack, Button,  Text, Heading, ChakraProvider, Menu, MenuButton, MenuList, MenuItem,  Input,} from "@chakra-ui/react";
+import { HamburgerIcon, SmallCloseIcon, DeleteIcon, RepeatClockIcon, LinkIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import {Associate_invoice} from '@/app/_ui/Associate_invoice'
+import {CreatelargeAdmin} from '@/app/_ui/Createstate'
 import { useSharedState } from '@/app/_ui/useSharedState';
 
 
@@ -11,10 +12,43 @@ import { useSharedState } from '@/app/_ui/useSharedState';
 export default function Userpage() {
     const { state, updateState } = useSharedState();
     const [showRightBox, setShowRightBox] = useState(false);
-    const [inicio, setinicio] = useState(true)
+    const [isinicio, setisinicio] = useState(false)
+    const [State, setState] = useState(false)
+    const [Add, setAdd] = useState(false)
   
+    const handleLogout = async () => {
+      try {
+          const response = await fetch('/logout', {
+              method: 'GET',
+          });
+
+          if (response.ok) {
+              router.push('/');
+          } else {
+              console.error('Failed to log out');
+          }
+      } catch (error) {
+          console.error('Error:', error);
+      }
+  };
+    const screen = (numero: number) => {
+
+      if (numero == 1) {
+          setAdd(true);
+          setState(false);
+      }
+      if (numero == 2) {
+        setAdd(false);
+        setState(true);
+      }
+      
+
+  };
+
+    
+
     const Asociar = () => {
-        setinicio(false);
+        setisinicio(false);
     };
     const Estado = () => {
       router.push('/app/estado_factura');
@@ -41,7 +75,7 @@ export default function Userpage() {
     return (
         <ChakraProvider>
       <div className=" flex w-full h-screen items-center justify-center lg:w-full bg-gradient-to-tr from-green-900 to-green-700 ">
-        {inicio && (
+        {!isinicio ? (
             <Box  className="bg-gray-200 relative px-10 py-20 rounded-3xl lg:w-96 lg:h-30">
             <Stack>
               <VStack>
@@ -55,7 +89,7 @@ export default function Userpage() {
                       <MenuItem icon={<DeleteIcon color="red.500" />} >
                         Eliminar Cuenta
                       </MenuItem>
-                        <MenuItem onClick={HandleLogout} icon={<SmallCloseIcon color="black" />} >
+                        <MenuItem onClick={handleLogout} icon={<SmallCloseIcon color="black" />} >
                           Cerrar Sesíon
                         </MenuItem>
                     </MenuList>
@@ -64,13 +98,13 @@ export default function Userpage() {
                 <Text className="absolute top-14 "  color='black'>Juan Rios</Text>
                 <VStack marginTop='15%' align="stretch">
                   
-                  <Button onClick={Estado} style={{marginTop:'30%'}} colorScheme='teal' backgroundColor='#F1D803'>
+                  <Button onClick={() => (setisinicio(true),screen(2))} style={{marginTop:'30%'}} colorScheme='teal' backgroundColor='#F1D803'>
                   <HStack>
                     <Text  color='black'>Estado de Facturas</Text>
                     <RepeatClockIcon w={5} h={5} color="black" /> 
                   </HStack>
                 </Button> 
-                    <Button onClick={handleClick} style={{marginBottom:'40%', marginTop:'10%'}} colorScheme='teal' backgroundColor='#F1D803'>
+                    <Button onClick={() => (setisinicio(true),screen(1))} style={{marginBottom:'40%', marginTop:'10%'}} colorScheme='teal' backgroundColor='#F1D803'>
                       <HStack>
                         <Text  color='black'>Asociar Facturas</Text>
                         <LinkIcon marginLeft='7%' w={5} h={5} color="black" /> 
@@ -80,15 +114,45 @@ export default function Userpage() {
               </VStack>
             </Stack>
           </Box>
-        )}
-        {!inicio && (
+        ) : (
         <>
         
             
             <div className={`relative p-4 bg-gray-100 border border-gray-300 text-center h-[82%] w-[80%]  rounded-3xl shadow-md flex flex-col`}>
             
+          
+        {Add === true && (
+          <Associate_invoice setisTable={setisinicio} isTable={isinicio} sharedState={state} updateSharedState={updateState}/>
+        )}
+        {State === true && (
+          <>
+          <Flex
+                            width="100%"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            p={2}
+          
+                            className="rounded-2xl"
+                            position="relative"
+                        >
+                            <Box position="absolute" left={1}>
+                           
+                            <Button onClick={() => setisinicio(false)} mb={2} colorScheme='teal' backgroundColor='#F1D803'  >
+                    <ArrowBackIcon width={5} height={5} color="black"/>
+                    </Button>
 
-        <Associate_invoice sharedState={state} updateSharedState={updateState}/>
+                            </Box>
+                            <Box flex={1} textAlign="center">
+                                <Text fontSize="xl" fontWeight="bold">
+                                    Estado Factura
+                                </Text>
+                            </Box>
+                        </Flex> 
+          
+                    
+                    <CreatelargeAdmin sharedState={state} updateSharedState={updateState} />
+                    </>
+        )}
 
             </div>
 

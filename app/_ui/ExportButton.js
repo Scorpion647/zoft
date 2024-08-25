@@ -1,153 +1,128 @@
-// components/exportData.ts
+
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
-import { getRecordsInfo, getRecords, getMaterial } from '@/app/_lib/database/service'; // Ajusta la ruta según tu estructura de archivos
-import { parse } from '@supabase/ssr';
+import { getMaterial, getRecord, getRecordInfo } from '@/app/_lib/database/service'; 
 
 async function fetchMaterialData(materialCode) {
-    // Obtener los detalles del material basado en el material_code
     const material = await getMaterial(materialCode);
     return material;
 }
 
 function removeTrailingZeros(num) {
-    // Convertimos el número a cadena para manipularlo
     let str = num.toString();
-
-    // Verificamos si hay un punto seguido de dos ceros
     if (str.includes('.00')) {
-        // Si es así, eliminamos los dos ceros y el punto
         return str.replace('.00', '');
     }
-
-    // Si no cumple la condición, retornamos el número original
     return str;
 }
 
 async function fetchRecordAndMaterialData(recordId) {
-    // Obtener el registro basado en el record_id
-    const records = await getRecords(1, 100, '', [['id', { ascending: true }]]);
-    const record = records?.find(r => r.id === recordId);
-    
-    if (!record) return null;
 
-    // Obtener los detalles del material basado en el material_code
-    const material = await fetchMaterialData(record.material_code);
-
-    return { record, material };
+    return { record: { material_code: recordId }, material: await fetchMaterialData(recordId) };
 }
 
-export async function handleExport({ TRM }) {
+export async function handleExport(visibleData) {
     try {
-        // Obtén los datos de la base de datos
-        const recordsInfo = await getRecordsInfo(1, 100); // Ajusta los parámetros según sea necesario
+        const dataPromises = visibleData.map(async (row) => {
 
-        if (recordsInfo) {
-            // Prepara los datos para la exportación
-            const dataPromises = recordsInfo.map(async (recordInfo) => {
-                const fetchedData = await fetchRecordAndMaterialData(recordInfo.record_id);
-                
-                // Verificar si fetchedData es nulo o undefined
-                if (!fetchedData) return null;
+            const recordId = row[0];
+            const fetchedData = await fetchRecordAndMaterialData(recordId);
+            const record = await getRecord(row[0],row[1])
+            const info = await getRecordInfo(record.id)
 
-                const { record, material } = fetchedData;
-                let conversion = 0;
-                if (material?.measurement_unit === "U") {
-                    conversion = 1;
-                } else {
-                    conversion = recordInfo.gross_weight / recordInfo.billed_quantity;
+            if (!fetchedData) return null;
+
+
+            let conversion = 0;
+            console.log("Valor de UC",row[10])
+            if (row[10] === "U" || row[10] === "L") {
+                console.log("Valor hacia U")
+                conversion = 1;
+            } else if(row[10] === "KG" || row[10] === "KGM") {
+                console.log("Valor hacia KG")
+                console.log(row[16])
+                console.log(row[5])
+                conversion = parseFloat((parseFloat(row[16]) / parseFloat(row[4])).toFixed(8));
+            } else{
+                conversion = 0;
+            }
+            console.log(conversion)
+            let hola = row[13]
+            let PTPRECIO = (hola).replace(/[$,]/g, '')
+            console.log(info.conversion)
+
+
+
+
+            return {
+                'CODSUBP': row[9],
+                'CODEMBALAJE': "PK",
+                'NMPESO_BRUTO': row[16] || '',
+                'NMPESO_NETO': row[16] || '',
+                'NMBULTOS': row[18] || '',
+                'CODBANDERA': 169,
+                'CODPAIS_ORIGEN': 169,
+                'PTTASA_CAMBIO': row[11],
+                'CODPAIS_COMPRA': 169,
+                'CODPAIS_DESTINO': 953,
+                'CODPAIS_PROCEDENCIA': 169,
+                'CODTRANSPORTE': 3,
+                'PTFLETES': 0,
+                'SEGUROS': 0,
+                'OTROS_GASTOS': 0,
+                'CODITEM': row[2] || 'N/A',
+                'NMCANTIDAD': row[4] || '',
+                'PTPRECIO': info.conversion === 1 ? parseFloat(PTPRECIO) : parseFloat((PTPRECIO/row[11]).toFixed(9)),
+                'NMCONVERSION': conversion
+            };
+        });
+
+        const allData = (await Promise.all(dataPromises)).filter(data => data !== null);
+
+        const groupedData = [];
+        const materialCodeMap = {};
+
+        allData.forEach(data => {
+            const materialCode = data['CODSUBP'];
+            if (materialCode) {
+                if (!materialCodeMap[materialCode]) {
+                    materialCodeMap[materialCode] = [];
                 }
-                let subhe = "";
+                materialCodeMap[materialCode].push(data);
+            }
+        });
 
-                // Verificación adicional para asegurarse de que material y material.subheading existan
-                if (material && material.subheading !== undefined) {
-                    console.log("entramos");
-                    console.log(material.subheading);
-                    console.log(material?.code);
-                    subhe = material.subheading;
-                } else {
-                    subhe = '124';
-                }
+        Object.values(materialCodeMap).forEach((items) => {
+            groupedData.push(items[0]);
 
-                return {
-                    'CODSUBP': subhe || '',
-                    'CODEMBALAJE': "PK",
-                    'NMPESO_BRUTO': recordInfo.gross_weight || '',
-                    'NMPESO_NETO': recordInfo.gross_weight || '',
-                    'NMBULTOS': recordInfo.packages || '',
-                    'CODBANDERA': 169,
-                    'CODPAIS_ORIGEN': 169,
-                    'PTTASA_CAMBIO': recordInfo.trm,
-                    'CODPAIS_COMPRA': 169,
-                    'CODPAIS_DESTINO': 953,
-                    'CODPAIS_PROCEDENCIA': 169,
-                    'CODTRANSPORTE': 3,
-                    'PTFLETES': 0,
-                    'SEGUROS': 0,
-                    'OTROS_GASTOS': 0,
-                    'CODITEM': material?.code || 'N/A',
-                    'NMCANTIDAD': recordInfo.billed_quantity || '',
-                    'PTPRECIO': recordInfo.conversion === 0  ? removeTrailingZeros(parseFloat((recordInfo.billed_unit_price / 100) / parseFloat(recordInfo.trm).toFixed(2)).toFixed(2)) : removeTrailingZeros(parseFloat(recordInfo.billed_unit_price / 100).toFixed(2)),
-                    'NMCONVERSION': conversion || 'N/A' // Ajusta si hay un campo diferente en RecordInfoRow
-                };
-            });
+            for (let i = 1; i < items.length; i++) {
+                groupedData.push({
+                    'CODSUBP': '',
+                    'CODEMBALAJE': '',
+                    'NMPESO_BRUTO': '',
+                    'NMPESO_NETO': '',
+                    'NMBULTOS': '',
+                    'CODBANDERA': '',
+                    'CODPAIS_ORIGEN': '',
+                    'PTTASA_CAMBIO': '',
+                    'CODPAIS_COMPRA': '',
+                    'CODPAIS_DESTINO': '',
+                    'CODPAIS_PROCEDENCIA': '',
+                    'CODTRANSPORTE': '',
+                    'PTFLETES': '',
+                    'SEGUROS': '',
+                    'OTROS_GASTOS': '',
+                    'CODITEM': items[i]['CODITEM'],
+                    'NMCANTIDAD': items[i]['NMCANTIDAD'],
+                    'PTPRECIO': items[i]['PTPRECIO'],
+                    'NMCONVERSION': items[i]['NMCONVERSION']
+                });
+            }
+        });
 
-            // Espera a que todas las promesas se resuelvan y filtra los resultados nulos
-            const allData = (await Promise.all(dataPromises)).filter(data => data !== null);
-
-            // Agrupación y adición de datos
-            const groupedData = [];
-            const materialCodeMap = {};
-
-            allData.forEach(data => {
-                const materialCode = data['CODITEM'];
-                if (materialCode) {
-                    if (!materialCodeMap[materialCode]) {
-                        materialCodeMap[materialCode] = [];
-                    }
-                    materialCodeMap[materialCode].push(data);
-                }
-            });
-
-            Object.values(materialCodeMap).forEach((items) => {
-                // Agregar el primer elemento tal como está
-                groupedData.push(items[0]);
-
-                // Si hay más elementos, agregar los siguientes sin los campos iniciales
-                for (let i = 1; i < items.length; i++) {
-                    groupedData.push({
-                        'CODSUBP': '',
-                        'CODEMBALAJE': '',
-                        'NMPESO_BRUTO': '',
-                        'NMPESO_NETO': '',
-                        'NMBULTOS': '',
-                        'CODBANDERA': '',
-                        'CODPAIS_ORIGEN': '',
-                        'PTTASA_CAMBIO': '',
-                        'CODPAIS_COMPRA': '',
-                        'CODPAIS_DESTINO': '',
-                        'CODPAIS_PROCEDENCIA': '',
-                        'CODTRANSPORTE': '',
-                        'PTFLETES': '',
-                        'SEGUROS': '',
-                        'OTROS_GASTOS': '',
-                        'CODITEM': items[i]['CODITEM'],
-                        'NMCANTIDAD': items[i]['NMCANTIDAD'],
-                        'PTPRECIO': items[i]['PTPRECIO'],
-                        'NMCONVERSION': items[i]['NMCONVERSION']
-                    });
-                }
-            });
-
-            // Convertir los datos a CSV
-            const csv = Papa.unparse(groupedData);
-
-            // Crear y exportar el archivo CSV
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            saveAs(blob, 'records.csv');
-        } else {
-            throw new Error('No se obtuvieron datos.');
-        }
+        const csv = Papa.unparse(groupedData,{ delimiter: ';'});
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, 'records.csv');
     } catch (err) {
         console.error('Error al generar el archivo CSV:', err);
     }
@@ -220,38 +195,38 @@ export async function handleExport({ TRM }) {
 
 
 
-                    // components/exportData.ts
+
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
-import { getRecordsInfo, getRecords, getMaterials } from '@/app/_lib/database/service'; // Ajusta la ruta según tu estructura de archivos
+import { getRecordsInfo, getRecords, getMaterials } from '@/app/_lib/database/service'; 
 
 async function fetchRecordAndMaterialData(recordId) {
-    // Obtener el registro basado en el record_id
+
     const records = await getRecords(1, 100, '', [['id', { ascending: true }]]);
     const record = records?.find(r => r.id === recordId);
     
     if (!record) return null;
 
-    // Obtener los detalles del material basado en el material_code
+ 
     const materials = await getMaterials(1, 100, '', [['code', { ascending: true }]]);
     const material = materials?.find(m => m.code === record.material_code);
 
     return { record, material };
 }
 
-// components/exportData.ts
+
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
-import { getRecordsInfo, getRecords, getMaterials } from '@/app/_lib/database/service'; // Ajusta la ruta según tu estructura de archivos
+import { getRecordsInfo, getRecords, getMaterials } from '@/app/_lib/database/service'; 
 
 async function fetchRecordAndMaterialData(recordId) {
-    // Obtener el registro basado en el record_id
+   
     const records = await getRecords(1, 100, '', [['id', { ascending: true }]]);
     const record = records?.find(r => r.id === recordId);
     
     if (!record) return null;
 
-    // Obtener los detalles del material basado en el material_code
+ 
     const materials = await getMaterials(1, 100, '', [['code', { ascending: true }]]);
     const material = materials?.find(m => m.code === record.material_code);
 
@@ -260,11 +235,11 @@ async function fetchRecordAndMaterialData(recordId) {
 
 export async function handleExport() {
     try {
-        // Obtén los datos de la base de datos
-        const recordsInfo = await getRecordsInfo(1, 100); // Ajusta los parámetros según sea necesario
+
+        const recordsInfo = await getRecordsInfo(1, 100); 
 
         if (recordsInfo) {
-            // Prepara los datos para la exportación
+
             const dataPromises = recordsInfo.map(async (recordInfo) => {
                 const { record, material } = await fetchRecordAndMaterialData(recordInfo.record_id) || {};
                 let conversion = 0;
@@ -293,27 +268,27 @@ export async function handleExport() {
                     'CODITEM': material?.code || 'N/A',
                     'NMCANTIDAD': recordInfo.billed_quantity,
                     'PTPRECIO': (recordInfo.billed_total_price / 100),
-                    'NMCONVERSION': conversion || 'N/A' // Ajusta si hay un campo diferente en RecordInfoRow
+                    'NMCONVERSION': conversion || 'N/A' 
                 };
             });
 
-            // Espera a que todas las promesas se resuelvan
+
             const allData = await Promise.all(dataPromises);
 
-            // Organiza los datos para que los items con el mismo Material Code estén juntos
+ 
             const groupedData = [];
             const materialCodeMap = {};
 
             for (const data of allData) {
                 const materialCode = data['CODITEM'];
                 if (materialCode && !materialCodeMap[materialCode]) {
-                    // Guardar el primer item del grupo con toda la información
+                
                     materialCodeMap[materialCode] = data;
                     groupedData.push(data);
                 } else if (materialCode) {
-                    // Agregar los items adicionales con el mismo Material Code
+                
                     groupedData.push({
-                        'CODSUBP': '', // Campos vacíos para los agrupados
+                        'CODSUBP': '', 
                         'CODEMBALAJE': '',
                         'NMPESO_BRUTO': '',
                         'NMPESO_NETO': '',
@@ -336,10 +311,10 @@ export async function handleExport() {
                 }
             }
 
-            // Convertir los datos a CSV
+    
             const csv = Papa.unparse(groupedData);
 
-            // Crear y exportar el archivo CSV
+  
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             saveAs(blob, 'records.csv');
         } else {
@@ -397,7 +372,7 @@ export async function handleExport() {
 
 
 
-    // components/exportData.ts
+
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import { getRecords, getRecordsInfo, getMaterials } from '@/app/_lib/database/service'; 
