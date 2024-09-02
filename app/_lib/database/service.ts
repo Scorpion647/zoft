@@ -162,6 +162,7 @@ export async function deleteRecord(id: Tables<'record'>['id']): Promise<CustomDa
 
 
 export async function getRecordInfo(record_id: Tables<'record_info'>['record_id']): Promise<Tables<'record_info'> | CustomDataError | null> {
+export async function getRecordInfo(id: Tables<'record_info'>['id']): Promise<Tables<'record_info'> | CustomDataError | null> {
     const supabase = createClient();
     const {data, error} = await supabase.from('record_info').select('*').eq('record_id', record_id).single();
 
@@ -212,6 +213,7 @@ export async function insertRecordInfo(info: TablesInsert<'record_info'>): Promi
 }
 
 export async function updateRecordInfo(record_id: Tables<'record_info'>['record_id'], new_data: TablesUpdate<'record_info'>): Promise<CustomDataError | void> {
+export async function updateRecordInfo(id: Tables<'record_info'>['id'], new_data: TablesUpdate<'record_info'>): Promise<CustomDataError | void> {
     const supabase = createClient();
     const {error} = await supabase.from('record_info').update(new_data).eq('record_id', record_id);
 

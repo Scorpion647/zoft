@@ -20,7 +20,10 @@ import {Tracking_bd} from '@/app/_ui/Tracking_bd'
 
 
 
+
 function _formatCurrency(number) {
+
+function formatCurrency(number:number) {
     return new Intl.NumberFormat('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -28,7 +31,7 @@ function _formatCurrency(number) {
   }
 
 
-const admin = () => {
+export default function Admin(){
     const { state, updateState } = useSharedState();
     const [MenuL, setMenuL] = useState(true)
     const [AddDomain, setAddDomain] = useState(false);
@@ -182,7 +185,11 @@ const handleVisibilityChange = (visible: any) => {
    const [updatedValue, setUpdatedValue] = useState('');
 
 
+
   const handleInputChange = (event) => {
+
+   // Manejo del cambio en el input
+  const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
 
@@ -532,9 +539,7 @@ const handleVisibilityChange = (visible: any) => {
             </div>
         </ChakraProvider>
     );
-};
-
-export default admin;
+}
 
 
 

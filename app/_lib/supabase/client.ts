@@ -18,24 +18,3 @@ export async function reauthenticate() {
     const supabase = createClient()
     return await supabase.auth.reauthenticate()
 }
-
-export async function checkIfAdmin(): Promise<boolean | CustomDataError> {
-    const supabase = createClient()
-    const {data, error} = await supabase.auth.getUser()
-
-    if (error) {
-        return manageErrorMessage(error);
-    }
-
-    if (data.user) {
-        const { data: profileData, error: profileError } = await supabase.from('profile').select('*').eq('user_id', data.user.id).limit(1).maybeSingle()
-
-        if (profileError) return manageErrorMessage(profileError);
-
-        if (!profileData) { return manageErrorMessage(null) }
-
-        return profileData.role === 'administrator'
-    }
-
-    return false;
-}

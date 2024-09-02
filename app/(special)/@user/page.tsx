@@ -1,5 +1,5 @@
 'use client'
-import { useState } from "react";
+import React, { useState } from "react";
 import { redirect, useRouter } from "next/navigation";
 import { Flex,Box, Stack, HStack, VStack, Button,  Text, Heading, ChakraProvider, Menu, MenuButton, MenuList, MenuItem,  Input,} from "@chakra-ui/react";
 import { HamburgerIcon, SmallCloseIcon, DeleteIcon, RepeatClockIcon, LinkIcon, ArrowBackIcon } from "@chakra-ui/icons";
@@ -58,7 +58,7 @@ export default function Userpage() {
   
     const [inputValue, setInputValue] = useState('');
   
-    const handleInputChange = (event) => {
+    const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {
       setInputValue(event.target.value);
     };
   
