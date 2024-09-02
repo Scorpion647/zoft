@@ -125,7 +125,6 @@ export const CreatelargeDomain = () => {
                             )}
                         </VStack>
 
-                        {/* Renderizado de los botones de paginación */}
                         
                     </VStack>
                     <HStack   width="100%" height="6%" bg="gray.200" justify="center">

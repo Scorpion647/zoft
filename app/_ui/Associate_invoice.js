@@ -1011,4 +1011,4 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
               <Button  mt={1} height="5%" onClick={handleSubmit}>Asociar</Button>
             </div>
     );
-}
+} 

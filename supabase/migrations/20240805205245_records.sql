@@ -5,7 +5,7 @@ COMMENT ON TABLE Access.Table_Permission IS '-- SELECT 0001
 
 
 DROP TYPE IF EXISTS Public.Material_Type;
-CREATE TYPE Public.Material_Type AS ENUM ( 'national', 'foreign' );
+CREATE TYPE Public.Material_Type AS ENUM ( 'national', 'foreign', 'nationalized', 'other' );
 
 CREATE TABLE IF NOT EXISTS Public.material (
   code             VARCHAR(255),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS Public.material (
 );
 
 DROP TYPE IF EXISTS Public.Currency;
-CREATE TYPE Public.Currency AS ENUM ('COP', 'USD');
+CREATE TYPE Public.Currency AS ENUM ('COP', 'USD', 'EUR');
 CREATE DOMAIN positive_integer AS INTEGER CHECK ( VALUE > 0 );
 
 CREATE TABLE IF NOT EXISTS Public.Record (

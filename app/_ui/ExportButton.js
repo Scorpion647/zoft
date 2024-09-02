@@ -1,7 +1,6 @@
-
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
-import { getMaterial, getRecord, getRecordInfo } from '@/app/_lib/database/service'; 
+import { getMaterial, getRecord, getRecordInfo } from '@/app/_lib/database/service';
 
 async function fetchMaterialData(materialCode) {
     const material = await getMaterial(materialCode);
@@ -17,52 +16,39 @@ function removeTrailingZeros(num) {
 }
 
 async function fetchRecordAndMaterialData(recordId) {
-
     return { record: { material_code: recordId }, material: await fetchMaterialData(recordId) };
 }
 
 export async function handleExport(visibleData) {
     try {
         const dataPromises = visibleData.map(async (row) => {
-
             const recordId = row[0];
             const fetchedData = await fetchRecordAndMaterialData(recordId);
-            const record = await getRecord(row[0],row[1])
-            const info = await getRecordInfo(record.id)
+            const record = await getRecord(row[0], row[1]);
+            const info = await getRecordInfo(record.id);
 
             if (!fetchedData) return null;
 
-
             let conversion = 0;
-            console.log("Valor de UC",row[10])
             if (row[10] === "U" || row[10] === "L") {
-                console.log("Valor hacia U")
                 conversion = 1;
-            } else if(row[10] === "KG" || row[10] === "KGM") {
-                console.log("Valor hacia KG")
-                console.log(row[16])
-                console.log(row[5])
+            } else if (row[10] === "KG" || row[10] === "KGM") {
                 conversion = parseFloat((parseFloat(row[16]) / parseFloat(row[4])).toFixed(8));
-            } else{
+            } else {
                 conversion = 0;
             }
-            console.log(conversion)
-            let hola = row[13]
-            let PTPRECIO = (hola).replace(/[$,]/g, '')
-            console.log(info.conversion)
 
-
-
-
+            let PTPRECIO = (row[13]).replace(/[$,]/g, '');
+            console.log(info.trm)
             return {
                 'CODSUBP': row[9],
                 'CODEMBALAJE': "PK",
-                'NMPESO_BRUTO': row[16] || '',
-                'NMPESO_NETO': row[16] || '',
-                'NMBULTOS': row[18] || '',
+                'NMPESO_BRUTO': parseFloat(row[16]) || 0,
+                'NMPESO_NETO': parseFloat(row[16]) || 0,
+                'NMBULTOS': parseFloat(row[18]) || 0,
                 'CODBANDERA': 169,
                 'CODPAIS_ORIGEN': 169,
-                'PTTASA_CAMBIO': row[11],
+                'PTTASA_CAMBIO': info.trm,
                 'CODPAIS_COMPRA': 169,
                 'CODPAIS_DESTINO': 953,
                 'CODPAIS_PROCEDENCIA': 169,
@@ -71,8 +57,8 @@ export async function handleExport(visibleData) {
                 'SEGUROS': 0,
                 'OTROS_GASTOS': 0,
                 'CODITEM': row[2] || 'N/A',
-                'NMCANTIDAD': row[4] || '',
-                'PTPRECIO': info.conversion === 1 ? parseFloat(PTPRECIO) : parseFloat((PTPRECIO/row[11]).toFixed(9)),
+                'NMCANTIDAD': parseFloat(row[4]) || 0,
+                'PTPRECIO': info.conversion === 1 ? parseFloat(PTPRECIO) : parseFloat((PTPRECIO / row[11]).toFixed(9)),
                 'NMCONVERSION': conversion
             };
         });
@@ -80,53 +66,114 @@ export async function handleExport(visibleData) {
         const allData = (await Promise.all(dataPromises)).filter(data => data !== null);
 
         const groupedData = [];
-        const materialCodeMap = {};
+        const subpMap = {};
 
         allData.forEach(data => {
-            const materialCode = data['CODSUBP'];
-            if (materialCode) {
-                if (!materialCodeMap[materialCode]) {
-                    materialCodeMap[materialCode] = [];
-                }
-                materialCodeMap[materialCode].push(data);
+            const codsubp = data['CODSUBP'];
+            const coditem = data['CODITEM'];
+            if (!subpMap[codsubp]) {
+                subpMap[codsubp] = {};
             }
+            if (!subpMap[codsubp][coditem]) {
+                subpMap[codsubp][coditem] = [];
+            }
+            subpMap[codsubp][coditem].push(data);
         });
 
-        Object.values(materialCodeMap).forEach((items) => {
-            groupedData.push(items[0]);
+        Object.keys(subpMap).forEach((codsubp) => {
+            const itemMap = subpMap[codsubp];
+            let firstItemVisible = true;
 
-            for (let i = 1; i < items.length; i++) {
-                groupedData.push({
-                    'CODSUBP': '',
-                    'CODEMBALAJE': '',
-                    'NMPESO_BRUTO': '',
-                    'NMPESO_NETO': '',
-                    'NMBULTOS': '',
-                    'CODBANDERA': '',
-                    'CODPAIS_ORIGEN': '',
-                    'PTTASA_CAMBIO': '',
-                    'CODPAIS_COMPRA': '',
-                    'CODPAIS_DESTINO': '',
-                    'CODPAIS_PROCEDENCIA': '',
-                    'CODTRANSPORTE': '',
-                    'PTFLETES': '',
-                    'SEGUROS': '',
-                    'OTROS_GASTOS': '',
-                    'CODITEM': items[i]['CODITEM'],
-                    'NMCANTIDAD': items[i]['NMCANTIDAD'],
-                    'PTPRECIO': items[i]['PTPRECIO'],
-                    'NMCONVERSION': items[i]['NMCONVERSION']
+            const summedBySubpartida = Object.values(itemMap).flat().reduce((acc, item) => {
+                acc['NMPESO_BRUTO'] += parseFloat(item['NMPESO_BRUTO']) || 0;
+                acc['NMPESO_NETO'] += parseFloat(item['NMPESO_NETO']) || 0;
+                acc['NMBULTOS'] += parseFloat(item['NMBULTOS']) || 0;
+                return acc;
+            }, {
+                'NMPESO_BRUTO': 0,
+                'NMPESO_NETO': 0,
+                'NMBULTOS': 0
+            });
+
+            Object.keys(itemMap).forEach((coditem) => {
+                const items = itemMap[coditem];
+
+                const summedItem = items.reduce((acc, item) => {
+                    acc['NMCANTIDAD'] += parseFloat(item['NMCANTIDAD']) || 0;
+                    return acc;
+                }, {
+                    
+                    'CODSUBP': codsubp,
+                    'CODEMBALAJE': "PK",
+                    ...summedBySubpartida, 
+                    'CODBANDERA': 169,
+                    'CODPAIS_ORIGEN': 169,
+                    'PTTASA_CAMBIO': 0,
+                    'CODPAIS_COMPRA': 169,
+                    'CODPAIS_DESTINO': 953,
+                    'CODPAIS_PROCEDENCIA': 169,
+                    'CODTRANSPORTE': 3,
+                    'PTFLETES': 0,
+                    'SEGUROS': 0,
+                    'OTROS_GASTOS': 0,
+                    'CODITEM': coditem,
+                    'NMCANTIDAD': 0,
+                    'PTPRECIO': 0,
+                    'NMCONVERSION': 0
                 });
-            }
+
+                const uniqueItems = items.filter((item, index, self) =>
+                    index === self.findIndex((t) => (
+                        t['PTPRECIO'] === item['PTPRECIO'] && t['NMCONVERSION'] === item['NMCONVERSION']
+                    ))
+                );
+
+                uniqueItems.forEach((item, index) => {
+                    if (firstItemVisible && index === 0) {
+                        summedItem['PTPRECIO'] = item['PTPRECIO'];
+                        summedItem['NMCONVERSION'] = item['NMCONVERSION'];
+                        groupedData.push(summedItem);
+                        firstItemVisible = false;
+                    } else {
+                        groupedData.push({
+                            'CODSUBP': '',
+                            'CODEMBALAJE': '',
+                            'NMPESO_BRUTO': '',
+                            'NMPESO_NETO': '',
+                            'NMBULTOS': '',
+                            'CODBANDERA': '',
+                            'CODPAIS_ORIGEN': '',
+                            'PTTASA_CAMBIO': '',
+                            'CODPAIS_COMPRA': '',
+                            'CODPAIS_DESTINO': '',
+                            'CODPAIS_PROCEDENCIA': '',
+                            'CODTRANSPORTE': '',
+                            'PTFLETES': '',
+                            'SEGUROS': '',
+                            'OTROS_GASTOS': '',
+                            'CODITEM': item['CODITEM'],
+                            'NMCANTIDAD': item['NMCANTIDAD'],
+                            'PTPRECIO': item['PTPRECIO'],
+                            'NMCONVERSION': item['NMCONVERSION']
+                        });
+                    }
+                });
+            });
         });
 
-        const csv = Papa.unparse(groupedData,{ delimiter: ';'});
+        const csv = Papa.unparse(groupedData, { delimiter: ';' });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         saveAs(blob, 'records.csv');
     } catch (err) {
         console.error('Error al generar el archivo CSV:', err);
     }
 }
+
+
+
+
+
+
 
 
 

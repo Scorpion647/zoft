@@ -17,7 +17,7 @@ function formatMoney(amount) {
 
 const ReturnTable = ({ suppliers }) => {
   const hotTableRef = useRef(null);
-  const [tableData, setTableData] = useState([]);
+  const [tableData, setTableData] = useState([]); 
   const [isLoading, setIsLoading] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
   const [billNumberFilter, setBillNumberFilter] = useState('all');

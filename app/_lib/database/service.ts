@@ -144,7 +144,7 @@ export async function updateRecord(
         .update(new_data)
         .eq('purchase_order', purchase_order)
         .eq('item', item)
-        .single();  // .single() garantiza que se espera solo un resultado
+        .single();  
 
     if (error) {
         return manageErrorMessage(error);

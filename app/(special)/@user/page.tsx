@@ -116,7 +116,7 @@ export default function Userpage() {
           </Box>
         ) : (
         <>
-        
+         
             
             <div className={`relative p-4 bg-gray-100 border border-gray-300 text-center h-[82%] w-[80%]  rounded-3xl shadow-md flex flex-col`}>
             

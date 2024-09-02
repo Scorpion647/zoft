@@ -365,7 +365,7 @@ const getsuplier = async (record) => {
     }
   };
 
-
+ 
   useEffect(() => {
     fetchData();
   }, [selectedTable]);

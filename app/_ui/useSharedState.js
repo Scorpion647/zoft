@@ -28,7 +28,7 @@ export function useSharedState() {
     nofactura: "",
     TRMNUM: 0,
 
-
+ 
   });
 
   const updateState = (key, value) => {
