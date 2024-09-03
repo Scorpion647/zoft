@@ -3,7 +3,6 @@
 import {createClient} from '../supabase/client'
 import {CustomDataError, manageErrorMessage} from "@/app/_lib/definitions";
 import {Except} from "type-fest";
-import {deleteUserServer} from './server_service';
 import {Tables, TablesInsert, TablesUpdate} from "@/app/_lib/supabase/db";
 
 
@@ -403,13 +402,5 @@ export async function updateProfile(profile_id: Tables<'profile'>['user_id'], da
 
     if (error) {
         return manageErrorMessage(error);
-    }
-}
-
-export async function deleteUser(user_id: Tables<'profile'>['user_id']): Promise<CustomDataError | void> {
-    try {
-        await deleteUserServer(user_id);
-    } catch (error) {
-        return manageErrorMessage(null);
     }
 }
