@@ -68,7 +68,6 @@ export async function handleExport(visibleData) {
         const groupedData = [];
         const subpMap = {};
 
-        // Agrupar datos por CODSUBP
         allData.forEach(data => {
             const codsubp = data['CODSUBP'];
             const coditem = data['CODITEM'];
@@ -85,7 +84,6 @@ export async function handleExport(visibleData) {
             const itemMap = subpMap[codsubp];
             let firstItemVisible = true;
 
-            // Sumar NMPESO_BRUTO, NMPESO_NETO y NMBULTOS para todas las filas con el mismo CODSUBP
             const summedBySubpartida = Object.values(itemMap).flat().reduce((acc, item) => {
                 acc['NMPESO_BRUTO'] += parseFloat(item['NMPESO_BRUTO']) || 0;
                 acc['NMPESO_NETO'] += parseFloat(item['NMPESO_NETO']) || 0;
@@ -100,7 +98,6 @@ export async function handleExport(visibleData) {
             Object.keys(itemMap).forEach((coditem) => {
                 const items = itemMap[coditem];
 
-                // Sumar valores para los mismos CODITEM
                 const summedItem = items.reduce((acc, item) => {
                     acc['NMCANTIDAD'] += parseFloat(item['NMCANTIDAD']) || 0;
                     return acc;
@@ -108,7 +105,7 @@ export async function handleExport(visibleData) {
                     
                     'CODSUBP': codsubp,
                     'CODEMBALAJE': "PK",
-                    ...summedBySubpartida, // Incluye las sumas agrupadas por CODSUBP
+                    ...summedBySubpartida, 
                     'CODBANDERA': 169,
                     'CODPAIS_ORIGEN': 169,
                     'PTTASA_CAMBIO': 0,
@@ -125,7 +122,7 @@ export async function handleExport(visibleData) {
                     'NMCONVERSION': 0
                 });
 
-                // Filtrar duplicados con los mismos PTPRECIO y NMCONVERSION
+                
                 const uniqueItems = items.filter((item, index, self) =>
                     index === self.findIndex((t) => (
                         t['PTPRECIO'] === item['PTPRECIO'] && t['NMCONVERSION'] === item['NMCONVERSION']

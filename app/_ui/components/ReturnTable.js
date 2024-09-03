@@ -18,13 +18,11 @@ function formatMoney(amount) {
 
 
 
-// Función `Material` optimizada
 const Material = async (code, number) => {
   const material = await getMaterial(code);
   return number === 0 ? material.subheading : number === 1 ? material.measurement_unit : material.type;
 };
 
-// Función `Typematerial` optimizada
 const Typematerial = (type) => {
   switch (type) {
     case 'national': return 'NACIONAL';
@@ -72,9 +70,9 @@ const ReturnTable = ({ suppliers }) => {
 
 const [totalpeso,setTotalpeso] = useState(0)
 
-  const [filterValue, setFilterValue] = useState(''); // Estado del valor del filtro
-  const [uniqueValues, setUniqueValues] = useState([]); // Valores únicos para el select
-  const columnToFilter = 8; // Índice de la columna que queremos filtrar (columna 8)
+  const [filterValue, setFilterValue] = useState(''); 
+  const [uniqueValues, setUniqueValues] = useState([]);
+  const columnToFilter = 8;
 
   useEffect(() => {
     const unique = [...new Set(tableData.map(row => row[columnToFilter]))];
@@ -90,9 +88,9 @@ const [totalpeso,setTotalpeso] = useState(0)
     setFilterValue(value);
 
     if (value === '') {
-      setFilteredData(tableData); // Mostrar todos los datos si no hay filtro
+      setFilteredData(tableData); 
     } else {
-      const newData = tableData.filter(row => row[columnToFilter] === value); // Filtrar datos
+      const newData = tableData.filter(row => row[columnToFilter] === value); 
       setFilteredData(newData);
     }
   };
@@ -108,7 +106,7 @@ const [totalpeso,setTotalpeso] = useState(0)
   const getMergeCells = () => {
     if(hotTableRef.current !== null && hotTableRef.current.hotInstance !== undefined){
       const hotInstance = hotTableRef.current.hotInstance;
-    const data = hotInstance.getData();  // Suponiendo que 'tableData' contiene los datos de tu tabla
+    const data = hotInstance.getData();  
     const mergeCells = [];
     let startRow = null;
     let lastValue8 = null;
@@ -118,22 +116,22 @@ const [totalpeso,setTotalpeso] = useState(0)
       const value8 = data[row][8];
       const value20 = data[row][20];
   
-      // Comprobar si estamos en una nueva serie de filas que deben combinarse
+
       if (value8 === lastValue8 && value20 === lastValue20) {
         if (startRow === null) {
-          startRow = row - 1; // Empezar a combinar desde la fila anterior
+          startRow = row - 1; 
         }
       } else {
-        // Si terminamos un grupo, añadirlo a mergeCells
+
         if (startRow !== null) {
           mergeCells.push({ row: startRow, col: 20, rowspan: row - startRow, colspan: 1 });
   
-          // Rellenar los valores para todas las celdas en este grupo
+
           for (let i = startRow + 1; i < row; i++) {
-            data[i][20] = data[startRow][20];  // Copiar el valor de la celda combinada a todas las filas
+            data[i][20] = data[startRow][20];  
           }
   
-          startRow = null; // Reiniciar para el siguiente grupo
+          startRow = null;
         }
       }
   
@@ -141,13 +139,13 @@ const [totalpeso,setTotalpeso] = useState(0)
       lastValue20 = value20;
     }
   
-    // Añadir el último grupo si hay uno abierto al final de la tabla
+
     if (startRow !== null) {
       mergeCells.push({ row: startRow, col: 20, rowspan: data.length - startRow, colspan: 1 });
   
-      // Rellenar los valores para todas las celdas en este último grupo
+
       for (let i = startRow + 1; i < data.length; i++) {
-        data[i][20] = data[startRow][20];  // Copiar el valor de la celda combinada a todas las filas
+        data[i][20] = data[startRow][20]; 
       }
     }
   
@@ -166,22 +164,21 @@ const [totalpeso,setTotalpeso] = useState(0)
   
       const recordIds = matchingRecords.map(record => record.id);
       const recordDetails = await Promise.all(recordIds.map(id => getRecordInfo(id))).then(res => res.flat());
-      
-      // Eliminar duplicados por `record_id` utilizando un mapa
+
       const uniqueRecordDetails = Array.from(new Map(recordDetails.map(record => [record.record_id, record])).values());
       
-      // Filtrar registros completos y ordenar
+
       const completeData = uniqueRecordDetails.filter(isRecordComplete).sort((a, b) => a.bill_number.localeCompare(b.bill_number));
   
-      // Cache para almacenar resultados de material y evitar solicitudes redundantes
+
       
   
-      // Obtener materiales y proveedores en paralelo
+
       const materialsPromises = completeData.map(async (record) => {
         const relatedRecord = matchingRecords.find((r) => r.id === record.record_id);
         const supplier = await getSupplier(relatedRecord.supplier_id);
   
-        // Obtener información del material y verificar material nacional
+
         const materialInfo = await Promise.all([0, 1, 2].map((num) => Material(relatedRecord.material_code, num)));
         let [subheading, unitt, tipo] = materialInfo;
         let code = relatedRecord.material_code;
@@ -193,7 +190,7 @@ const [totalpeso,setTotalpeso] = useState(0)
           unitt = materialNational.measurement_unit || unitt;
           tipo = materialNational.type || tipo;
   
-          // Actualizar el tipo de material si es necesario
+
           if (!materialNational.type) await updateMaterial(materialNational.code, { type: "national" });
         }
         let status = "hola"
@@ -204,7 +201,7 @@ const [totalpeso,setTotalpeso] = useState(0)
         }else if(record.status === "rejected"){
           status = "Rechazado"
         }
-        // Calcular la conversión
+
         const conversion = (unitt === 'KG' || unitt === 'KGM') ? parseFloat((record.gross_weight / record.billed_quantity).toFixed(8)) : (['U', 'L'].includes(unitt) ? 1 : 0);
   
         return [
@@ -320,17 +317,15 @@ const [totalpeso,setTotalpeso] = useState(0)
       const hotInstance = hotTableRef.current.hotInstance;
     const data = hotInstance.getData();
   
-    // Función genérica para calcular la suma de una columna
+
     const calculateColumnSum = (columnIndex) => {
       return data.reduce((acc, row) => acc + (parseFloat(row[columnIndex]) || 0), 0);
     };
   
-    // Cálculo de los totales
     const totalSum = calculateColumnSum(14);
     const totalSum1 = calculateColumnSum(16);
-    const totalSum2 = calculateColumnSum(18);
-  
-    // Actualización de los estados
+    const totalSum2 = calculateColumnSum(18); 
+
     setTotalpeso(totalSum1);
     setTotalbultos(totalSum2);
     setTotalCop(totalSum);
@@ -358,23 +353,23 @@ const [totalpeso,setTotalpeso] = useState(0)
   
     const newFilteredData = tableData.map(({ original, display }) => display)
       .filter(row => {
-        console.log("Row Before Filter:", row); // Verifica cada fila antes del filtrado
+        console.log("Row Before Filter:", row); 
         return (
           row &&
-          row.length > 8 && // Asegúrate de que cada fila tenga al menos 8 elementos
+          row.length > 8 && 
           (billNumberFilter === 'all' || row[0] === billNumberFilter) &&
           (statusFilter === 'all' || row[20] === statusFilter)
         );
       });
   
-    console.log("Filtered Data:", newFilteredData); // Verifica el resultado del filtrado
+    console.log("Filtered Data:", newFilteredData); 
   
     setFilteredData(newFilteredData);
   }, [billNumberFilter, statusFilter]);
   
 
   const uniqueBillNumbers = useMemo(() => {
-    // Filtrar los elementos que tienen display y display[0]
+
     const billNumbers = tableData
       .filter(({ display }) => Array.isArray(display) && display[0] !== undefined)
       .map(({ display }) => display[0]);
@@ -382,7 +377,7 @@ const [totalpeso,setTotalpeso] = useState(0)
   }, [tableData]);
   
   const uniqueStatuses = useMemo(() => {
-    // Filtrar los elementos que tienen display y display[7]
+
     const statuses = tableData
       .filter(({ display }) => Array.isArray(display) && display[20] !== undefined)
       .map(({ display }) => display[7]);
@@ -395,26 +390,26 @@ const [totalpeso,setTotalpeso] = useState(0)
       const hotInstance = hotTableRef.current.hotInstance;
       const updatedData = hotInstance.getData();
   
-      // Mapea los datos de la tabla actualizados y los datos originales
+
       const updates = tableData.map((entry, index) => {
-        // Verifica si la fila existe y si tiene suficientes columnas
+
         const row = updatedData[index];
         if (row && row.length > 20) {
           const updatedStatus = row[20];
   
-          // Verifica si el estado ha cambiado
+
           if (entry.original && entry.original.status !== updatedStatus) {
-            // Preparar el update solo si el estado ha cambiado
+
             return {
               recordId: entry.original.record_id,
               newStatus: updatedStatus
             };
           }
         }
-        return null; // Ignora las filas que no han cambiado
-      }).filter(update => update !== null); // Filtra las actualizaciones válidas
+        return null; 
+      }).filter(update => update !== null); 
   
-      // Realiza las actualizaciones en paralelo
+
       const updatePromises = updates.map(async ({ recordId, newStatus }) => {
         console.log(`Updating record ${recordId} with status ${newStatus}`);
         return await updateRecordInfo(recordId, { status: newStatus });
@@ -422,20 +417,19 @@ const [totalpeso,setTotalpeso] = useState(0)
   
       await Promise.all(updatePromises);
       alert('Registros actualizados exitosamente');
-      fetchData(); // Refresca los datos después de la actualización
+      fetchData(); 
     } catch (error) {
       console.error('Error actualizando registros:', error);
       alert('Hubo un problema al actualizar los registros.');
     }
   };
-  const [mergeCellsConfig, setMergeCellsConfig] = useState([]); // Estado para almacenar la configuración de mergeCells
+  const [mergeCellsConfig, setMergeCellsConfig] = useState([]); 
   
-    // useEffect que se ejecuta solo una vez en el montaje del componente
+
     useEffect(() => {
-      const initialMergeCells = getMergeCells(); // Calcula mergeCells solo una vez
-      setMergeCellsConfig(initialMergeCells); // Establece la configuración de mergeCells en el estado
-    }, [isLoading]); // Array vacío como segundo argumento asegura que solo se ejecute una vez
-  
+      const initialMergeCells = getMergeCells(); 
+      setMergeCellsConfig(initialMergeCells); 
+    }, [isLoading]); 
   
 
   const changeSelectedStatus = (status) => {
@@ -581,9 +575,9 @@ const [totalpeso,setTotalpeso] = useState(0)
               afterOnCellMouseDown={(event, coords) => {
                 const { row, col } = coords;
               
-                if (col !== 20) { // Solo ejecuta la lógica si la celda pertenece a la columna A
+                if (col !== 20) { 
                   const hotInstance = hotTableRef.current.hotInstance;
-                  const valueInColumnA = hotInstance.getDataAtCell(row, 8); // Valor en columna A de la fila seleccionada
+                  const valueInColumnA = hotInstance.getDataAtCell(row, 8); 
               
                   let sum1 = 0;
                   let sum2 = 0;
@@ -624,9 +618,7 @@ const [totalpeso,setTotalpeso] = useState(0)
 
 
 
-    // Aplicar estilos en línea para centrar el texto
-                // Aplicar estilos en línea para centrar el texto
-     // Aplicar estilos en línea para centrar el texto
+
 
 
      cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
@@ -637,48 +629,47 @@ const [totalpeso,setTotalpeso] = useState(0)
       td.style.alignItems = 'center';
       td.style.height = '100%';
 
-      // Determinar el valor en la columna 'STATUS' (columna 20)
-      // Identificar el grupo de filas con el mismo valor en la columna STATUS
+
 
       const statusValue = hotInstance.getDataAtCell(row, 8);
       
       const rows = hotInstance.getData();
       const groupRows = [];
 
-      // Encontrar todas las filas con el mismo valor en la columna STATUS
+
       for (let i = 0; i < rows.length; i++) {
         if (hotInstance.getDataAtCell(i, 8) === statusValue) {
           groupRows.push(i);
         }
       }
 
-      // Verificar la posición de la fila en el grupo
+
       const isFirstRow = row === groupRows[0];
       const isLastRow = row === groupRows[groupRows.length - 1];
 
-      // Aplicar los estilos de borde según la posición en el grupo
+
       td.style.borderLeft = '1px solid rgba(0, 0, 0, 0.5)';
       td.style.borderRight = '1px solid rgba(0, 0, 0, 0.5)';
 
       if (groupRows.length === 1) {
-        // Caso de una sola fila en el grupo
+
         td.style.borderTop = '1px solid rgba(0, 0, 0, 0.5)';
         td.style.borderBottom = '1px solid rgba(0, 0, 0, 0.5)';
       } else {
-        // Caso de más de una fila en el grupo
+
         if (isFirstRow) {
           td.style.borderTop = '1px solid rgba(0, 0, 0, 0.5)';
-          td.style.borderBottom = 'none'; // No borde inferior en la primera fila
+          td.style.borderBottom = 'none'; 
         } else if (isLastRow) {
-          td.style.borderTop = 'none'; // No borde superior en la última fila
+          td.style.borderTop = 'none'; 
           td.style.borderBottom = '1px solid rgba(0, 0, 0, 0.5)';
         } else {
-          td.style.borderTop = 'none'; // No borde superior para filas intermedias
-          td.style.borderBottom = 'none'; // No borde inferior para filas intermedias
+          td.style.borderTop = 'none'; 
+          td.style.borderBottom = 'none'; 
         }
       }
 
-      // Ajustar estilos según el valor de STATUS
+  
       if (col === 20) {
         if (value === "Pendiente") {
           td.style.backgroundColor = editableStyle.backgroundColor;

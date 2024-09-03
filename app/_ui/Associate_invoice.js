@@ -516,11 +516,11 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
       
 
     const handleSubmit = async () => {
-      // Mostrar un cuadro de confirmación antes de proceder
+
       const userConfirmed = window.confirm('¿Estás seguro de que deseas realizar la siguiente asociacion de factura?');
   
       if (!userConfirmed) {
-          // Si el usuario cancela, no hacer nada
+
           return;
       }
   

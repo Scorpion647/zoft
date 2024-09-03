@@ -26,7 +26,7 @@ function formatDate(dateString) {
 function groupByPurchaseOrder(recordsInfo, records) {
   const groupedData = {};
 
-  // Crear un mapa de id de registros a purchase_order
+
   const recordIdToOrder = records.reduce((acc, record) => {
     if (record.id && record.purchase_order) {
       acc[record.id] = record.purchase_order;
@@ -36,12 +36,12 @@ function groupByPurchaseOrder(recordsInfo, records) {
     return acc;
   }, {});
 
-  // Agrupar registros por purchase_order
+
   recordsInfo.forEach(item => {
     const order = recordIdToOrder[item.record_id];
     if (!order) {
       console.warn(`No purchase_order found for record_id: ${item.record_id}`);
-      return; // Skip if no order found
+      return; 
     }
 
     if (!groupedData[order]) {
@@ -64,9 +64,9 @@ function groupByPurchaseOrder(recordsInfo, records) {
     groupedData[order].record_ids.push(item.record_id);
   });
 
-  // Convertir a formato de salida
+
   return Object.entries(groupedData).map(([order, { fecha, estado }]) => ({
-    orden: order, // Aquí aseguramos que no haya `undefined`
+    orden: order, 
     fecha: formatDate(fecha),
     estado,
   }));
@@ -134,7 +134,6 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
           const limit = 10000;
           let hasMoreRecords = true;
   
-          // Obtener todos los registros
           while (hasMoreRecords) {
             console.log(`Fetching records - Page: ${page}, Limit: ${limit}`);
             const records = await getRecords(page, limit);
@@ -144,7 +143,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
               allRecords = allRecords.concat(records);
   
               if (records.length < limit) {
-                hasMoreRecords = false; // No more records to fetch
+                hasMoreRecords = false; 
               } else {
                 page += 1;
               }
@@ -154,14 +153,13 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
             }
           }
   
-          // Obtener toda la información asociada a los registros
           let allRecordsInfo = [];
           const recordIds = allRecords.map(record => record.id);
   
           for (let i = 0; i < recordIds.length; i += limit) {
             const batch = recordIds.slice(i, i + limit);
             console.log(`Fetching records info - Batch: ${i / limit + 1}, Limit: ${limit}`);
-            const recordsInfo = await getRecordsInfo(1, limit); // Aquí asumimos que `getRecordsInfo` paginación también funciona así
+            const recordsInfo = await getRecordsInfo(1, limit); 
   
             if (Array.isArray(recordsInfo) && recordsInfo.length > 0) {
               console.log(`Records Info fetched: ${recordsInfo.length}`);
@@ -172,7 +170,6 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
             }
           }
   
-          // Agrupar datos por purchase_order
           if (allRecordsInfo.length > 0) {
             const groupedData = groupByPurchaseOrder(allRecordsInfo, allRecords);
             console.log('Final Grouped Data:', groupedData);

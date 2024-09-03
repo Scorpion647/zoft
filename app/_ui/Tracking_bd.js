@@ -81,10 +81,10 @@ export const Tracking_bd = ({ onButtonClick }) => {
         try {
             let allRecords = [];
             let page = 1;
-            const limit = 10000; // Ajusta según tus necesidades
+            const limit = 10000; 
             let hasMoreRecords = true;
     
-            // Obtener todos los registros
+  
             while (hasMoreRecords) {
                 const records = await getRecords(page, limit);
                 if (Array.isArray(records) && records.length > 0) {
@@ -104,7 +104,7 @@ export const Tracking_bd = ({ onButtonClick }) => {
             page = 1;
             hasMoreRecords = true;
     
-            // Obtener detalles de los registros
+   
             while (hasMoreRecords) {
                 const recordDetails = await getRecordsInfo(page, limit);
                 if (Array.isArray(recordDetails) && recordDetails.length > 0) {
@@ -174,7 +174,7 @@ export const Tracking_bd = ({ onButtonClick }) => {
             const formattedData = await Promise.all(materialsPromises);
             const validFormattedData = formattedData.filter(item => item !== null);
     
-            // Agrupar los datos válidos
+         
             const grouped = validFormattedData.reduce((acc, item) => {
                 const existing = acc.find((entry) => entry.oc === item[0]);
                 if (existing) {
