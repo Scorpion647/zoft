@@ -26,13 +26,24 @@ function formatDate(dateString) {
 function groupByPurchaseOrder(recordsInfo, records) {
   const groupedData = {};
 
+  // Crear un mapa de id de registros a purchase_order
   const recordIdToOrder = records.reduce((acc, record) => {
-    acc[record.id] = record.purchase_order;
+    if (record.id && record.purchase_order) {
+      acc[record.id] = record.purchase_order;
+    } else {
+      console.warn(`Record without purchase_order:`, record);
+    }
     return acc;
   }, {});
 
+  // Agrupar registros por purchase_order
   recordsInfo.forEach(item => {
     const order = recordIdToOrder[item.record_id];
+    if (!order) {
+      console.warn(`No purchase_order found for record_id: ${item.record_id}`);
+      return; // Skip if no order found
+    }
+
     if (!groupedData[order]) {
       groupedData[order] = {
         fecha: item.created_at,
@@ -53,12 +64,14 @@ function groupByPurchaseOrder(recordsInfo, records) {
     groupedData[order].record_ids.push(item.record_id);
   });
 
+  // Convertir a formato de salida
   return Object.entries(groupedData).map(([order, { fecha, estado }]) => ({
-    orden: order,
+    orden: order, // Aquí aseguramos que no haya `undefined`
     fecha: formatDate(fecha),
     estado,
   }));
 }
+
 
 
 
@@ -91,7 +104,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
  
 
 
- 
+
 
   const [hola, sethola] = useState(false);
   const router = useRouter();
@@ -112,17 +125,58 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   useEffect(() => {
     if (isTable === false) {
       console.log("Cargando datos...");
-      setIsLoading(true); 
+      setIsLoading(true);
   
       const fetchData = async () => {
         try {
-          const records = await getRecords(1, 1000);
-          if (Array.isArray(records)) {
-            const recordsInfo = await getRecordsInfo(1, 1000);
-            if (Array.isArray(recordsInfo)) {
-              const groupedData = groupByPurchaseOrder(recordsInfo, records);
-              setFilteredData(groupedData);
+          let allRecords = [];
+          let page = 1;
+          const limit = 10000;
+          let hasMoreRecords = true;
+  
+          // Obtener todos los registros
+          while (hasMoreRecords) {
+            console.log(`Fetching records - Page: ${page}, Limit: ${limit}`);
+            const records = await getRecords(page, limit);
+  
+            if (Array.isArray(records) && records.length > 0) {
+              console.log(`Records fetched: ${records.length}`);
+              allRecords = allRecords.concat(records);
+  
+              if (records.length < limit) {
+                hasMoreRecords = false; // No more records to fetch
+              } else {
+                page += 1;
+              }
+            } else {
+              console.log('No more records to fetch');
+              hasMoreRecords = false;
             }
+          }
+  
+          // Obtener toda la información asociada a los registros
+          let allRecordsInfo = [];
+          const recordIds = allRecords.map(record => record.id);
+  
+          for (let i = 0; i < recordIds.length; i += limit) {
+            const batch = recordIds.slice(i, i + limit);
+            console.log(`Fetching records info - Batch: ${i / limit + 1}, Limit: ${limit}`);
+            const recordsInfo = await getRecordsInfo(1, limit); // Aquí asumimos que `getRecordsInfo` paginación también funciona así
+  
+            if (Array.isArray(recordsInfo) && recordsInfo.length > 0) {
+              console.log(`Records Info fetched: ${recordsInfo.length}`);
+              allRecordsInfo = allRecordsInfo.concat(recordsInfo);
+            } else {
+              console.log('No more records info to fetch');
+              break;
+            }
+          }
+  
+          // Agrupar datos por purchase_order
+          if (allRecordsInfo.length > 0) {
+            const groupedData = groupByPurchaseOrder(allRecordsInfo, allRecords);
+            console.log('Final Grouped Data:', groupedData);
+            setFilteredData(groupedData);
           }
         } catch (error) {
           console.error("Error al obtener datos:", error);
@@ -134,6 +188,8 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
       fetchData();
     }
   }, [isTable]);
+  
+  
   
 
   useEffect(() => {
@@ -173,12 +229,12 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   };
 
   useEffect(() => {
-
+    
   }, [selectedSupplier2]);
 
   if (!hola && selectedSupplier2) {
-
-    return <ReturnTable suppliers={selectedSupplier2} />;
+    sethola(true)
+    
   }
 
 
@@ -307,9 +363,10 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
 
 
           )}
+          
         </>
       )}
-      {hola && <ReturnTable />}
+{hola && (<ReturnTable suppliers={selectedSupplier2} />)}
     </>
 
   );

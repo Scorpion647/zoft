@@ -1,6 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
+import { Alert,Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
 import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon, ArrowBackIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
@@ -8,6 +8,7 @@ import 'handsontable/dist/handsontable.full.css';
 import { getRecords, getMaterial, getMaterials, getRecordsInfo, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord } from '@/app/_lib/database/service';
 import { TbRuler2Off } from "react-icons/tb";
 import { GiButterflyKnife } from "react-icons/gi";
+import { getRole } from "../_lib/supabase/server";
 
 
 
@@ -282,7 +283,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           if (orderNumber.trim() !== '') {
             setIsLoading(true);
         
-            getRecords(1, 10000) 
+            getRecords(1, 40000) 
               .then((data) => {
                 if (Array.isArray(data)) {
                   const matchingRecords = data
@@ -311,7 +312,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             setRemainingCount(0);
           }
         }
-      }, 700);
+      }, 500);
       return () => {
         if (debounceTimeoutRef1.current) {
           clearTimeout(debounceTimeoutRef1.current);
@@ -447,15 +448,13 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
         const pos = data[coords.row]?.[0]?.toString().trim();
         const quanti = parseInt(data[coords.row]?.[2]?.toString().trim(), 10);
     
-        const records = await getRecords(1, 150, orderNumber);
+        const records = await getRecord(orderNumber,pos);
+
     
-        if (Array.isArray(records)) {   
-            const matchedRecord = records.find(record =>
-                record.purchase_order.trim() === orderNumber.trim() &&
-                record.item.toString().trim() === pos
-            );
+  
+            const matchedRecord = records
     
-            if (matchedRecord) {
+            if ((records.item !== 0 && records.item !== "" && records.item !== null && records.item !== undefined && records.item !== NaN) && (pos !== 0 && pos !== "" && pos !== undefined && pos !== NaN && pos !== null)) {
                 const { material_code, currency, description, supplier_id, quantity } = matchedRecord;
                 const unit_price = convertCommaToDot(data[coords.row]?.[3]?.toString().trim());
                 const supplier = await getSupplier(supplier_id);
@@ -498,14 +497,14 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             const totalSum = data.reduce((sum, row) => {
                 const unip = parseFloat(row[3]) || 0;
                 const can = parseFloat(row[2]) || 0;
-                return unip > 0 && can > 0 ? sum + unip * can : sum;
+                return unip > 0 && can > 0 ? sum + (unip * can) : sum;
             }, 0);
     
-            updateSharedState('totalfactura', totalSum.toFixed(2));
+            updateSharedState('totalfactura', formatMoney(totalSum.toFixed(2)));
     
             updateSharedState('SelectedCellValue', cellValue);
             setLastClickTime(currentTime);
-        }
+        
     };
     
 
@@ -516,146 +515,154 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     
       
 
-      const handleSubmit = async () => {
-        const hotInstance = hotTableRef.current?.hotInstance;
-        if (!hotInstance) {
-            console.error('Handsontable instance has been destroyed or is not available.');
-            return;
-        }
-    
-        const tableData = hotInstance.getData();
-        const records = [];
-        const update = [];
-        const seenPositions = new Set();
-        const duplicatePositions = new Map();
-        const incompleteRows = [];
-    
-        let hasCompleteRow = false;
-    
-        for (const [index, row] of tableData.entries()) {
-            const isEmptyRow = row.every(cell => cell === null || cell === '' || cell === undefined);
-    
-            if (isEmptyRow) continue;
-    
-            const [record_position, material_code, billed_quantity, bill_number,, subheading] = row;
-    
-            if ((record_position && material_code && bill_number && billed_quantity && subheading) !== undefined && (record_position && material_code && bill_number && billed_quantity && subheading) !== null) {
-                hasCompleteRow = true;
-    
-                const pos = hotInstance.getDataAtCell(index, 0);
-                const matchedRecord = await getRecord(orderNumber, pos);
-    
-                if (!matchedRecord) {
-                    console.error(`No record found for position ${pos}`);
-                    continue;
-                }
-    
-                const { id, unit_price, material_code, quantity } = matchedRecord;
-                const material = await getMaterial(material_code);
-    
-                let factunitprice = 0;
-                let totalprice = 0;
-                totalprice = ((parseFloat(hotInstance.getDataAtCell(index, 3)).toFixed(2)) * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
-                factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
-    
-                let Trm = sharedState.TRMNUM;
-                const gross = ((((((hotInstance.getDataAtCell(index, 2)) / sharedState.columnSum) * 100)) * sharedState.pesototal) / 100).toFixed(2);
-                const packag = (((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * 100)) * (sharedState.bultos)) / 100).toFixed(3);
-                let conver = sharedState.TRM ? 1 : 0;
-    
-                if (seenPositions.has(record_position)) {
-                    if (!duplicatePositions.has(record_position)) {
-                        duplicatePositions.set(record_position, []);
-                    }
-                    duplicatePositions.get(record_position).push(index + 1);
-                } else {
-                    seenPositions.add(record_position);
-    
-                    const record = {
-                        bill_number: sharedState.nofactura,
-                        billed_quantity,
-                        billed_total_price: parseInt(totalprice * 100),
-                        billed_unit_price: parseInt(factunitprice * 100),
-                        gross_weight: gross,
-                        packages: packag,
-                        record_id: id,
-                        trm: Trm,
-                        conversion: conver,
-                    };
-    
-                    const purchase_order = orderNumber;
-                    const item = pos;
-                    const new_data = {
-                        quantity: quantity - billed_quantity,
-                    };
-    
-                    console.log("Prepared update record:", { purchase_order, item, new_data });
-    
-                    if (purchase_order && item && new_data) {
-                        update.push({ purchase_order, item, new_data });
-                    } else {
-                        console.error("Incomplete data for update:", { purchase_order, item, new_data });
-                    }
-    
-                    records.push(record);
-                }
-            } else {
-                incompleteRows.push(index + 1);
-            }
-        }
-    
-        if (incompleteRows.length > 0) {
-            alert(`Las siguientes filas están incompletas: ${incompleteRows.join(', ')}`);
-            return;
-        }
-    
-        if (!hasCompleteRow) {
-            alert('Debe haber al menos una fila completa.');
-            return;
-        }
-    
-        if (duplicatePositions.size > 0) {
-            const duplicatesMsg = Array.from(duplicatePositions.entries())
-                .map(([pos, indices]) => `Posición ${pos}: Fila(s) ${indices.join(', ')}`)
-                .join('\n');
-            alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
-            return;
-        }
-    
-        let success = true;
-        for (const record of records) {
-            const result = await insertRecordInfo(record);
-            if (result instanceof Error) {
-                console.error(result);
-                alert(`Error al almacenar el registro para la posición ${record.record_position}: ${result.message}`);
-                success = false;
-            } else {
-                console.log("Updating record:", update);
-    
-                const { purchase_order, item, new_data } = update.shift();
-    
-                console.log("Before updateRecord - purchase_order:", purchase_order);
-                console.log("Before updateRecord - item:", item);
-                console.log("Before updateRecord - new_data:", new_data);
-    
-                const updat = await updateRecord(purchase_order, item, new_data);
-    
-                if (updat instanceof Error) {
-                    alert(`Error al actualizar el registro para la posición ${record.record_position}: ${updat.message}`);
-                    success = false;
-                } else {
-                    console.log(`Registro para la posición ${record.record_position} almacenado y actualizado correctamente.`);
-                }
-            }
-        }
-    
-        if (success) {
-            setisTable(false);
-            alert('Registros enviados correctamente.');
-        } else {
-            alert('Hubo errores al enviar los datos.');
-        }
-    };
+    const handleSubmit = async () => {
+      // Mostrar un cuadro de confirmación antes de proceder
+      const userConfirmed = window.confirm('¿Estás seguro de que deseas realizar la siguiente asociacion de factura?');
+  
+      if (!userConfirmed) {
+          // Si el usuario cancela, no hacer nada
+          return;
+      }
+  
+      const hotInstance = hotTableRef.current?.hotInstance;
+      if (!hotInstance) {
+          console.error('Handsontable instance has been destroyed or is not available.');
+          return;
+      }
+  
+      const tableData = hotInstance.getData();
+      const records = [];
+      const update = [];
+      const seenPositions = new Set();
+      const duplicatePositions = new Map();
+      const incompleteRows = [];
+  
+      let hasCompleteRow = false;
+  
+      for (const [index, row] of tableData.entries()) {
+          const isEmptyRow = row.every(cell => cell === null || cell === '' || cell === undefined);
+  
+          if (isEmptyRow) continue;
+  
+          const [record_position, material_code, billed_quantity, bill_number,, subheading] = row;
+  
+          if ((record_position && material_code && bill_number && billed_quantity && subheading) !== undefined && (record_position && material_code && bill_number && billed_quantity && subheading) !== null) {
+              hasCompleteRow = true;
+  
+              const pos = hotInstance.getDataAtCell(index, 0);
+              const matchedRecord = await getRecord(orderNumber, pos);
+  
+              if (!matchedRecord) {
+                  console.error(`No record found for position ${pos}`);
+                  continue;
+              }
+  
+              const { id, unit_price, material_code, quantity } = matchedRecord;
+              const material = await getMaterial(material_code);
+  
+              let factunitprice = 0;
+              let totalprice = 0;
+              totalprice = ((parseFloat(hotInstance.getDataAtCell(index, 3)).toFixed(2)) * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
+              factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
+  
+              let Trm = sharedState.TRMNUM;
+              const gross = ((((((hotInstance.getDataAtCell(index, 2)) / sharedState.columnSum) * 100)) * sharedState.pesototal) / 100).toFixed(9);
+              const packag = (((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * 100)) * (sharedState.bultos)) / 100).toFixed(9);
+              let conver = sharedState.TRM ? 1 : 0;
+  
+              if (seenPositions.has(record_position)) {
+                  if (!duplicatePositions.has(record_position)) {
+                      duplicatePositions.set(record_position, []);
+                  }
+                  duplicatePositions.get(record_position).push(index + 1);
+              } else {
+                  seenPositions.add(record_position);
+  
+                  const record = {
+                      bill_number: sharedState.nofactura,
+                      billed_quantity,
+                      billed_total_price: parseInt(totalprice * 100),
+                      billed_unit_price: parseInt(factunitprice * 100),
+                      gross_weight: gross,
+                      packages: packag,
+                      record_id: id,
+                      trm: Trm,
+                      conversion: conver,
+                  };
+  
+                  const purchase_order = orderNumber;
+                  const item = pos;
+                  const new_data = {
+                      quantity: quantity - billed_quantity,
+                  };
+  
+                  console.log("Prepared update record:", { purchase_order, item, new_data });
+  
+                  if (purchase_order && item && new_data) {
+                      update.push({ purchase_order, item, new_data });
+                  } else {
+                      console.error("Incomplete data for update:", { purchase_order, item, new_data });
+                  }
+  
+                  records.push(record);
+              }
+          } else {
+              incompleteRows.push(index + 1);
+          }
+      }
+  
+      if (incompleteRows.length > 0) {
+          alert(`Las siguientes filas están incompletas: ${incompleteRows.join(', ')}`);
+          return;
+      }
+  
+      if (!hasCompleteRow) {
+          alert('Debe haber al menos una fila completa.');
+          return;
+      }
+  
+      if (duplicatePositions.size > 0) {
+          const duplicatesMsg = Array.from(duplicatePositions.entries())
+              .map(([pos, indices]) => `Posición ${pos}: Fila(s) ${indices.join(', ')}`)
+              .join('\n');
+          alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
+          return;
+      }
+  
+      let success = true;
+      for (const record of records) {
+          const result = await insertRecordInfo(record);
+          if (result instanceof Error) {
+              console.error(result);
+              alert(`Error al almacenar el registro para la posición ${record.record_position}: ${result.message}`);
+              success = false;
+          } else {
+              console.log("Updating record:", update);
+  
+              const { purchase_order, item, new_data } = update.shift();
+  
+              console.log("Before updateRecord - purchase_order:", purchase_order);
+              console.log("Before updateRecord - item:", item);
+              console.log("Before updateRecord - new_data:", new_data);
+  
+              const updat = await updateRecord(purchase_order, item, new_data);
+  
+              if (updat instanceof Error) {
+                  alert(`Error al actualizar el registro para la posición ${record.record_position}: ${updat.message}`);
+                  success = false;
+              } else {
+                  console.log(`Registro para la posición ${record.record_position} almacenado y actualizado correctamente.`);
+              }
+          }
+      }
+  
+      if (success) {
+          setisTable(false);
+          alert('Registros enviados correctamente.');
+      } else {
+          alert('Hubo errores al enviar los datos.');
+      }
+  };
     
     
     
@@ -765,7 +772,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                 
                 <HStack width="40%" align="end" justify="end">
                 <Text  fontSize="90%" className=" font-bold">Valor Total de la Factura</Text>
-                <Text  fontSize="90%">{formatMoney(sharedState.totalfactura)}</Text>
+                <Text  fontSize="90%">{formatMoney(parseFloat(sharedState.totalfactura))}</Text>
                 </HStack>
                 </HStack>
               <Box height="68%" width="100%" overflow="auto" >
@@ -868,7 +875,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                       
                     }
                     if (col === 0) {
-                      if (data[row][0] !== "" && data[row][1] === undefined && data[row][0] !== undefined && data[row][0] !== NaN && data[row][0] !== null) {
+                      if (data[row][0] !== "" && (data[row][1] === undefined || data[row][1] === NaN || data[row][1] === "" || data[row][1] === null) && data[row][0] !== undefined && data[row][0] !== NaN && data[row][0] !== null) {
                         cellProperties.renderer = (hotInstance, td, row, col, prop, value, cellProperties) => {
                           Handsontable.renderers.TextRenderer(hotInstance, td, row, col, prop, value, cellProperties);
                           td.style.backgroundColor = readonlyStyle.backgroundColor;
@@ -938,7 +945,8 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                 
                                             hot.setCellMeta(row, 5, 'readOnly', !subheading);
                                             hot.setDataAtRowProp(row, 1, material_code);
-                
+                                            const hola = await getRole();
+                                            console.log(hola)
                                             if (subheading !== "" && subheading !== undefined && subheading !== null && subheading !== NaN && subheading !== 0 && subheading !== " ") {
                                                 hot.setDataAtRowProp(row, 5, "**********");
                                             } else {
@@ -1011,4 +1019,4 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
               <Button  mt={1} height="5%" onClick={handleSubmit}>Asociar</Button>
             </div>
     );
-} 
+}

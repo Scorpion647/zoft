@@ -5,7 +5,7 @@ COMMENT ON TABLE Access.Table_Permission IS '-- SELECT 0001
 
 
 DROP TYPE IF EXISTS Public.Material_Type;
-CREATE TYPE Public.Material_Type AS ENUM ( 'national', 'foreign', 'nationalized', 'other' );
+CREATE TYPE Public.Material_Type AS ENUM ( 'national', 'foreign','nationalized', 'other');
 
 CREATE TABLE IF NOT EXISTS Public.material (
   code             VARCHAR(255),
@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS Public.record_info (
   created_by         Uuid                 NOT NULL DEFAULT Auth.Uid( ),
   modified_at        TIMESTAMP WITH TIME ZONE      DEFAULT NOW( ) NOT NULL,
   conversion           DECIMAL              NOT NULL,
+  
 
   PRIMARY KEY ( id ),
   FOREIGN KEY ( record_id ) REFERENCES Public.Record ( Id ) ON DELETE CASCADE ON UPDATE CASCADE,

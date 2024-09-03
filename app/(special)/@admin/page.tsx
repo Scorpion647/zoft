@@ -21,9 +21,9 @@ import {Tracking_bd} from '@/app/_ui/Tracking_bd'
 
 
 
-function _formatCurrency(number) {
 
-function formatCurrency(number:number) {
+
+function _formatCurrency(number:number) {
     return new Intl.NumberFormat('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -186,7 +186,7 @@ const handleVisibilityChange = (visible: any) => {
 
 
 
-  const handleInputChange = (event) => {
+
 
    // Manejo del cambio en el input
   const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {

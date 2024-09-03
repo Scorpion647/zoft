@@ -79,60 +79,103 @@ export const Tracking_bd = ({ onButtonClick }) => {
     const handleFetchData = async () => {
         setIsLoading(true);
         try {
-            const allRecords = await getRecords(1, 1000);
+            let allRecords = [];
+            let page = 1;
+            const limit = 10000; // Ajusta según tus necesidades
+            let hasMoreRecords = true;
+    
+            // Obtener todos los registros
+            while (hasMoreRecords) {
+                const records = await getRecords(page, limit);
+                if (Array.isArray(records) && records.length > 0) {
+                    allRecords = allRecords.concat(records);
+                    page += 1;
+                    if (records.length < limit) {
+                        hasMoreRecords = false;
+                    }
+                } else {
+                    hasMoreRecords = false;
+                }
+            }
+    
             const recordIds = allRecords.map((record) => record.id);
-            const allRecordDetails = await getRecordsInfo(1, 1000);
-
+    
+            let allRecordDetails = [];
+            page = 1;
+            hasMoreRecords = true;
+    
+            // Obtener detalles de los registros
+            while (hasMoreRecords) {
+                const recordDetails = await getRecordsInfo(page, limit);
+                if (Array.isArray(recordDetails) && recordDetails.length > 0) {
+                    allRecordDetails = allRecordDetails.concat(recordDetails);
+                    page += 1;
+                    if (recordDetails.length < limit) {
+                        hasMoreRecords = false;
+                    }
+                } else {
+                    hasMoreRecords = false;
+                }
+            }
+    
             const filteredRelatedData = allRecordDetails
                 .filter((detail) =>
                     recordIds.includes(detail.record_id) && detail.status === 'approved'
                 );
-
+    
             const sortedData = filteredRelatedData.sort((a, b) =>
                 a.bill_number.localeCompare(b.bill_number)
             );
-
+    
             const materialsPromises = sortedData.map(async (record) => {
-                const relatedRecord = allRecords.find((r) => r.id === record.record_id);
-                const material = await Material(relatedRecord.material_code, 0);
-                const unit = await Material(relatedRecord.material_code, 1);
-                const type = await Material(relatedRecord.material_code, 2);
-                const supplier = await getSupplier(relatedRecord.supplier_id);
-                const conversion =
-                    record.unit === 'U'
+                try {
+                    const relatedRecord = allRecords.find((r) => r.id === record.record_id);
+                    if (!relatedRecord) {
+                        console.warn(`Related record not found for record ID: ${record.record_id}`);
+                        return null;
+                    }
+    
+                    const material = await Material(relatedRecord.material_code, 0);
+                    const unit = await Material(relatedRecord.material_code, 1);
+                    const type = await Material(relatedRecord.material_code, 2);
+                    const supplier = await getSupplier(relatedRecord.supplier_id);
+                    const conversion = record.unit === 'U'
                         ? 1
-                        : parseFloat(
-                            (record.gross_weight / record.billed_quantity).toFixed(8)
-                        );
-
-                return [
-                    relatedRecord.purchase_order,
-                    relatedRecord.item,
-                    relatedRecord.material_code,
-                    relatedRecord.description,
-                    record.billed_quantity,
-                    relatedRecord.measurement_unit,
-                    supplier.name,
-                    parseFloat(parseFloat((record.billed_unit_price / 100) / record.trm).toFixed(8)),
-                    record.bill_number,
-                    material,
-                    unit,
-                    record.trm,
-                    formatMoney(parseFloat((record.billed_unit_price / 100) / record.trm) * record.billed_quantity),
-                    formatMoney(record.billed_unit_price / 100),
-                    formatMoney((record.billed_unit_price / 100) * record.billed_quantity),
-                    Typematerial(type),
-                    record.gross_weight,
-                    record.gross_weight,
-                    record.packages,
-                    conversion,
-                ];
+                        : parseFloat((record.gross_weight / record.billed_quantity).toFixed(8));
+    
+                    return [
+                        relatedRecord.purchase_order,
+                        relatedRecord.item,
+                        relatedRecord.material_code,
+                        relatedRecord.description,
+                        record.billed_quantity,
+                        relatedRecord.measurement_unit,
+                        supplier.name,
+                        parseFloat(parseFloat((record.billed_unit_price / 100) / record.trm).toFixed(8)),
+                        record.bill_number,
+                        material,
+                        unit,
+                        record.trm,
+                        formatMoney(parseFloat((record.billed_unit_price / 100) / record.trm) * record.billed_quantity),
+                        formatMoney(record.billed_unit_price / 100),
+                        formatMoney((record.billed_unit_price / 100) * record.billed_quantity),
+                        Typematerial(type),
+                        record.gross_weight,
+                        record.gross_weight,
+                        record.packages,
+                        conversion,
+                    ];
+                } catch (error) {
+                    console.error(`Error processing record ${record.record_id}:`, error);
+                    return null;
+                }
             });
-
+    
             const formattedData = await Promise.all(materialsPromises);
-
-  
-            const grouped = formattedData.reduce((acc, item) => {
+            const validFormattedData = formattedData.filter(item => item !== null);
+    
+            // Agrupar los datos válidos
+            const grouped = validFormattedData.reduce((acc, item) => {
                 const existing = acc.find((entry) => entry.oc === item[0]);
                 if (existing) {
                     existing.fobUnitTotal += parseMoney(item[12]);
@@ -146,18 +189,22 @@ export const Tracking_bd = ({ onButtonClick }) => {
                 }
                 return acc;
             }, []);
-
-            setData(formattedData);
+    
+            setData(validFormattedData);
             setGroupedData(grouped);
-            setFilteredData(grouped); 
+            setFilteredData(grouped);
         } catch (error) {
-            console.error(error);
+            console.error('Error fetching data:', error);
         } finally {
             setIsLoading(false);
         }
     };
-
-   
+    
+    
+    
+    
+    
+    
 
     
     const handleFilterChange = (e) => {
@@ -351,7 +398,7 @@ export const Tracking_bd = ({ onButtonClick }) => {
 
 
 
- 
+
 
 
 //colWidths={[50, 150, 50, 110, 110 , 100,]}

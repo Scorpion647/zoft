@@ -27,8 +27,11 @@ export function useSharedState() {
     totalfactura: 0,
     nofactura: "",
     TRMNUM: 0,
+    pesostotal: 0,
+    bultostotal: 0,
+    totalfacturas: 0,
 
- 
+
   });
 
   const updateState = (key, value) => {

@@ -6,7 +6,7 @@ import 'handsontable/dist/handsontable.full.css';
 import Handsontable from 'handsontable';
 import { Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress, Spinner } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
-import { insertMaterial, insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial } from '@/app/_lib/database/service'; 
+import { insertMaterial, insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord } from '@/app/_lib/database/service'; 
 
 
 const initialData = {
@@ -93,11 +93,11 @@ export const ImportDataBase = () => {
   
     try {
       if (selectedTable === 'records') {
-        existingRecords = await getRecords(1, 1000);
+        existingRecords = await getRecords(1, 30000);
       } else if (selectedTable === 'materials') {
         existingMaterials = await getMaterials(1, 40000);
       } else if (selectedTable === 'suppliers') {
-        existingSuppliers = await getSuppliers(1, 100);
+        existingSuppliers = await getSuppliers(1, 1000);
       }
     } catch (error) {
       console.error('Error fetching existing data:', error);
@@ -123,15 +123,11 @@ export const ImportDataBase = () => {
           currency
         ] = row;
   
-        const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.position === position && record.material_code === material_code);
-        let materialExists = false;
+        const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.position === position);
         let supplierExists = false;
         let supplierId = 0;
   
-  
-        if (!materialExists) {
-          invalidMaterialEntries.push(i + 1);
-        }
+        
         if (!supplierExists) {
 
               const domainExists = await getSupplier("","",supplier_name);
@@ -145,28 +141,33 @@ export const ImportDataBase = () => {
 
           }
           const verifi = await getSupplier("","",supplier_name);
-                console.log(verifi.id)
                   supplierId = verifi.id; 
         }
-  
-        if (supplierExists) {
+        const exist = await getRecord(purchase_order,position)
+        console.log(exist.purchase_order)
+        if (supplierExists && (exist.item === undefined || exist.item === NaN || exist.item !== Number || exist.item === "" || exist.item === null)) {
           const args = {
-            item: position,
-            quantity: Number(quantity),
-            material_code,
-            purchase_order,
+            item: parseInt(position),
+            quantity: parseInt((String(quantity)).replace(/[.,]/g, '')),
+            material_code: String(material_code),
+            purchase_order: Number(purchase_order),
             measurement_unit,
-            unit_price: parseFloat(parseFloat(unit_price).toFixed(2) * 100).toFixed(0),
+            unit_price: parseFloat((String((parseFloat(unit_price).toFixed(2) * 100).toFixed(0))).replace(/[.,]/g, '')),
             currency: currency,
             created_at: new Date().toISOString(),
             supplier_id: supplierId,
             description: description,
-            net_price: parseFloat(net_price * 100).toFixed(0),
+            net_price: parseFloat((String(parseFloat(net_price * 100).toFixed(0))).replace(/[.,]/g, '')),
           };
 
             try {
+              console.log(args.unit_price)
+              if(args.unit_price === NaN || Number(args.unit_price) === Number(0) || args.unit_price === undefined || args.unit_price === null || args.unit_price === "" || String(args.unit_price) === "null"){
+                console.log("aqui justo fallamos")
+                continue;
+              }
               const result = await insertRecord(args);
-              console.log('Record inserted successfully:', result);
+              console.log('Record inserted successfully:');
             } catch (error) {
               console.error('Error processing data:', error.message);
             
@@ -183,16 +184,20 @@ export const ImportDataBase = () => {
   
         const existingMaterial = existingMaterials.find(material => material.code === code);
         const args = { code, subheading };
-        if(type === "national" || type === "foreign"){
+        if(type === "national" || type === "foreign" || type === "nationalized" || type === "other"){
           args.type = type
-        }else if(type === "NACIONAL" || type === "NACIONALIZADO"){
+        }else if(type === "NACIONAL"){
           args.type = "national"
         }else if(type === "EXTRANJERO"){
           args.type = "foreign"
+        }else if(type === "NACIONALIZADO"){
+          args.type = "nationalized"
+        }else if(type === "OTRO"){
+          args.type = "other"
         }
         if (measurement_unit !== "" ) args.measurement_unit = measurement_unit;
         const revisar = await getMaterial(code)
-        if (revisar.code == code) {
+        if (revisar.code == code) { 
           const safeTrim = (value) => typeof value === 'string' ? value.trim() : '';
 
           const revisarCode = safeTrim(revisar.code);
@@ -287,7 +292,7 @@ export const ImportDataBase = () => {
         duration: 10000,
       });
     }
-  
+    
     setIsProcessing(false);
     setProgress(100);
   };
@@ -310,7 +315,7 @@ const getsuplier = async (record) => {
     setisloading(true)
     try {
       if (selectedTable === 'records') {
-        const records = await getRecords(1, 1000);
+        const records = await getRecords(1, 200);
         
         if (records) {
           const supplierIds = [...new Set(records.map(record => record.supplier_id))];
@@ -339,7 +344,7 @@ const getsuplier = async (record) => {
           setData(formattedRecords);
         }
       } else if (selectedTable === 'materials') {
-        const materials = await getMaterials(1,4000);
+        const materials = await getMaterials(1,100);
         
         if (materials) {
           setData(materials.map(material => [
@@ -365,7 +370,7 @@ const getsuplier = async (record) => {
     }
   };
 
- 
+
   useEffect(() => {
     fetchData();
   }, [selectedTable]);
