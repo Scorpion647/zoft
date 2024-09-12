@@ -22,6 +22,9 @@ VALUES ('appdata');
 INSERT INTO access.table_permissions (table_name, user_role, permissions)
 VALUES ('appdata', 'administrator', B'1111');
 
+insert into access.table_permissions (table_name, user_role, permissions)
+values ('appdata', 'employee', B'0001');
+
 CREATE FUNCTION public.after_appdata_update() RETURNS trigger AS
 $$
 BEGIN

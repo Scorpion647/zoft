@@ -18,35 +18,36 @@ $$ LANGUAGE sql IMMUTABLE;
 
 -- permissions
 INSERT INTO access.table_names (name)
-VALUES ('supplier');
+VALUES ('suppliers');
 
 INSERT INTO access.table_permissions (table_name, user_role, permissions)
-VALUES ('supplier', 'administrator', B'1111');
+VALUES ('suppliers', 'administrator', B'1111');
 
 
 -- SUPPLIER EMPLOYEE TABLE
 CREATE TABLE public.supplier_employees
 (
-    profile_id  uuid REFERENCES public.profiles (profile_id) ON DELETE CASCADE ON UPDATE CASCADE   NOT NULL,
-    supplier_id int4 REFERENCES public.suppliers (supplier_id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+    supplier_employee_id SERIAL primary key,
+    profile_id  uuid REFERENCES public.profiles (profile_id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+    supplier_id int4 REFERENCES public.suppliers (supplier_id) ON DELETE CASCADE ON UPDATE CASCADE  NOT NULL,
     created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()                                             NOT NULL,
-    PRIMARY KEY (profile_id, supplier_id)
+    UNIQUE (profile_id, supplier_id)
 );
 
 INSERT INTO access.table_names (name)
-VALUES ('supplier_employee');
+VALUES ('supplier_employees');
 
 INSERT INTO access.table_permissions (table_name, user_role, permissions)
-VALUES ('supplier_employee', 'administrator', B'1111');
+VALUES ('supplier_employees', 'administrator', B'1111');
 
 -- rls for supplier employees
 ALTER TABLE public.supplier_employees
     ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Select for supplier employees" ON public.supplier_employees FOR SELECT TO authenticated USING (public.role_has_permission('supplier_employee', B'0001'));
-CREATE POLICY "Insert for supplier employees" ON public.supplier_employees FOR INSERT TO authenticated WITH CHECK (public.role_has_permission('supplier_employee', B'0010'));
-CREATE POLICY "Update for supplier employees" ON public.supplier_employees FOR UPDATE TO authenticated USING (public.role_has_permission('supplier_employee', B'0100'));
-CREATE POLICY "Delete for supplier employees" ON public.supplier_employees FOR DELETE TO authenticated USING (public.role_has_permission('supplier_employee', B'1000'));
+CREATE POLICY "Select for supplier employees" ON public.supplier_employees FOR SELECT TO authenticated USING (public.role_has_permission('supplier_employees', B'0001'));
+CREATE POLICY "Insert for supplier employees" ON public.supplier_employees FOR INSERT TO authenticated WITH CHECK (public.role_has_permission('supplier_employees', B'0010'));
+CREATE POLICY "Update for supplier employees" ON public.supplier_employees FOR UPDATE TO authenticated USING (public.role_has_permission('supplier_employees', B'0100'));
+CREATE POLICY "Delete for supplier employees" ON public.supplier_employees FOR DELETE TO authenticated USING (public.role_has_permission('supplier_employees', B'1000'));
 CREATE POLICY "Employees can select" ON public.supplier_employees FOR SELECT TO authenticated USING (public.supplier_employees.profile_id = auth.uid());
 
 
@@ -57,9 +58,9 @@ ALTER TABLE public.suppliers
 CREATE POLICY "Select for suppliers" ON public.suppliers FOR SELECT TO authenticated USING (
     public.role_has_permission('supplier', B'0001')
     );
-CREATE POLICY "Insert for suppliers" ON public.suppliers FOR INSERT TO authenticated WITH CHECK (public.role_has_permission('supplier', B'0010'));
-CREATE POLICY "Update for suppliers" ON public.suppliers FOR UPDATE TO authenticated USING (public.role_has_permission('supplier', B'0100'));
-CREATE POLICY "Delete for suppliers" ON public.suppliers FOR DELETE TO authenticated USING (public.role_has_permission('supplier', B'1000'));
+CREATE POLICY "Insert for suppliers" ON public.suppliers FOR INSERT TO authenticated WITH CHECK (public.role_has_permission('suppliers', B'0010'));
+CREATE POLICY "Update for suppliers" ON public.suppliers FOR UPDATE TO authenticated USING (public.role_has_permission('suppliers', B'0100'));
+CREATE POLICY "Delete for suppliers" ON public.suppliers FOR DELETE TO authenticated USING (public.role_has_permission('suppliers', B'1000'));
 CREATE POLICY "Employees can select" ON public.suppliers FOR SELECT TO authenticated USING (EXISTS(SELECT 1
                                                                                                    FROM public.supplier_employees
                                                                                                    WHERE supplier_employees.supplier_id = public.suppliers.supplier_id
