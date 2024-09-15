@@ -5,7 +5,7 @@ create type public.material_type as enum (
 create table if not exists public.materials
 (
     material_code    varchar(255),
-    subheading       varchar(10) check (length(subheading) = 10),
+    subheading       varchar(10) check (length(subheading) = 10 or subheading is null),
     type             public.material_type,
     measurement_unit varchar(50),
     created_at       timestamp

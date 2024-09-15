@@ -86,6 +86,7 @@ create function public.supplier_data_after_insert() returns trigger as
 $$
 begin
     update public.base_bills set quantity = (quantity - new.billed_quantity) where base_bill_id = new.base_bill_id;
+    return new;
 end
 $$ language plpgsql security definer;
 
@@ -105,6 +106,7 @@ begin
         where
             base_bill_id = new.base_bill_id;
     end if;
+    return new;
 end
 $$ language plpgsql security definer;
 

@@ -1,10 +1,17 @@
 -- PROFILE TABLE
+
+create extension citext with schema extensions;
+
+create domain domain_email as extensions.citext
+    check (
+        true
+        );
 create table public.profiles
 (
     profile_id uuid primary key references auth.users (id) on delete cascade,
     full_name  varchar(255)             default null,
     user_role  access.user_roles        default 'guest',
-    email      varchar(255)             default null check (email ~* '^.+@.+\..+$'),
+    email      domain_email             default null unique,
     created_at timestamp with time zone default now(),
     updated_at timestamp with time zone default now()
 );
@@ -90,7 +97,7 @@ create trigger after_profile_delete
 execute procedure public.after_profile_delete();
 
 create policy "Select for profiles" on public.profiles for select to authenticated using (
-    public.role_has_permission('profiles', B'0001')
+    true
     );
 create policy "Insert for profiles" on public.profiles for insert to authenticated with check (
     public.role_has_permission('profiles', B'0010')

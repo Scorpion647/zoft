@@ -8,8 +8,8 @@ create policy "select for base bills" on public.base_bills for select to authent
                    from
                        public.supplier_employees em
                            inner join public.suppliers using (supplier_id)
-                           inner join public.base_bills using (supplier_id)
                    where
+                       em.supplier_id = public.base_bills.supplier_id and
                        em.profile_id = auth.uid())
     );
 

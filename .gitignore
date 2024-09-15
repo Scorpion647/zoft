@@ -38,3 +38,7 @@ next-env.d.ts
 
 #  jetbrains
 .idea
+
+# snaplet
+.snaplet.*
+!.snaplet/config.json
