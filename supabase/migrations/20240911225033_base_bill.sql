@@ -1,33 +1,67 @@
-CREATE TYPE public.Material_Type AS ENUM ( 'national', 'foreign','nationalized', 'other');
+create type public.material_type as enum (
+    'national', 'foreign', 'nationalized', 'other'
+    );
 
-CREATE TABLE IF NOT EXISTS Public.materials (
-  material_code             VARCHAR(255),
-  subheading       VARCHAR(10) check ( LENGTH( subheading ) = 10 ),
-  type             Public.Material_Type,
-  measurement_unit VARCHAR(50),
-  created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW( ) NOT NULL,
-
-  PRIMARY KEY ( material_code )
+create table if not exists public.materials
+(
+    material_code    varchar(255),
+    subheading       varchar(10) check (length(subheading) = 10),
+    type             public.material_type,
+    measurement_unit varchar(50),
+    created_at       timestamp
+                         with
+                         time zone default now() not null,
+    primary key (material_code)
 );
 
-CREATE TYPE Public.Currency AS ENUM ('COP', 'USD', 'EUR');
-CREATE DOMAIN positive_integer AS INTEGER CHECK ( VALUE > 0 );
+insert into
+    access.table_names ( name )
+values
+    ( 'materials' );
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'materials', 'administrator', B'1111' );
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'materials', 'employee', B'0101' );
+create type public.currency as enum ('COP', 'USD', 'EUR');
 
-create table public.base_bills (
-  base_bill_id     uuid             default uuid_generate_v4() not null,
-  item             Positive_Integer NOT NULL,
-  quantity         Positive_Integer NOT NULL DEFAULT 0,
-  material_code    VARCHAR(50)      NOT NULL,
-  purchase_order   VARCHAR(50)      NOT NULL,
-  measurement_unit VARCHAR(50)      NOT NULL,
-  unit_price       BIGINT           NOT NULL,
-  currency         Public.Currency   NOT NULL,
-  created_at       TIMESTAMP WITH TIME ZONE  DEFAULT NOW( ) NOT NULL,
-  supplier_id      INTEGER          NOT NULL,
-  description      VARCHAR(50),
-  net_price        BIGINT,
+create domain positive_integer as integer check (value > 0);
 
-  PRIMARY KEY ( base_bill_id ),
-  FOREIGN KEY ( supplier_id ) REFERENCES Public.Suppliers ( supplier_id ) ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE ( base_bill_id, purchase_order )
+create table public.base_bills
+(
+    base_bill_id     uuid          default gen_random_uuid() not null,
+    item             positive_integer                        not null,
+    quantity         positive_integer                        not null default 0,
+    material_code    varchar(50)                             not null,
+    purchase_order   varchar(50)                             not null,
+    measurement_unit varchar(50)                             not null,
+    unit_price       bigint                                  not null,
+    currency         public.currency                         not null,
+    created_at       timestamp
+                         with
+                         time zone default now()             not null,
+    supplier_id      integer                                 not null,
+    description      varchar(50),
+    net_price        bigint,
+    primary key (base_bill_id),
+    foreign key (supplier_id) references public.suppliers (
+                                                           supplier_id
+        ) on delete cascade on update cascade,
+    unique (base_bill_id, purchase_order)
 );
+
+insert into
+    access.table_names ( name )
+values
+    ( 'base_bills' );
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'base_bills', 'administrator', B'1111' );
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'base_bills', 'employee', B'0001' );

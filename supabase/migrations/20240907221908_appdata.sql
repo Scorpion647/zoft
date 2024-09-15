@@ -1,40 +1,54 @@
-CREATE TYPE app_options AS enum ('trm_usd', 'trm_eur');
+create type app_options as enum ('trm_usd', 'trm_eur');
 
-CREATE TABLE public.appdata
+create table public.appdata
 (
-    key        app_options PRIMARY KEY                NOT NULL,
-    value      jsonb                                  NOT NULL,
-    created_at timestamp with time zone DEFAULT NOW() NOT NULL,
-    updated_at timestamp with time zone DEFAULT NOW() NOT NULL
+    key        app_options primary key                not null,
+    value      jsonb                                  not null,
+    created_at timestamp with time zone default now() not null,
+    updated_at timestamp with time zone default now() not null
 );
 
-ALTER TABLE public.appdata
-    ENABLE ROW LEVEL SECURITY;
+alter table public.appdata
+    enable row level security;
 
-CREATE POLICY "Select for appdata" ON public.appdata FOR SELECT TO authenticated USING (public.role_has_permission('appdata', B'0001'));
-CREATE POLICY "Insert for appdata" ON public.appdata FOR INSERT TO authenticated WITH CHECK (public.role_has_permission('appdata', B'0010'));
-CREATE POLICY "Update for appdata" ON public.appdata FOR UPDATE TO authenticated USING (public.role_has_permission('appdata', B'0100'));
-CREATE POLICY "Delete for appdata" ON public.appdata FOR DELETE TO authenticated USING (public.role_has_permission('appdata', B'1000'));
+create policy "Select for appdata" on public.appdata for select to authenticated using (
+    public.role_has_permission('appdata', B'0001')
+    );
+create policy "Insert for appdata" on public.appdata for insert to authenticated with check (
+    public.role_has_permission('appdata', B'0010')
+    );
+create policy "Update for appdata" on public.appdata for update to authenticated using (
+    public.role_has_permission('appdata', B'0100')
+    );
+create policy "Delete for appdata" on public.appdata for delete to authenticated using (
+    public.role_has_permission('appdata', B'1000')
+    );
 
-INSERT INTO access.table_names (name)
-VALUES ('appdata');
+insert into
+    access.table_names ( name )
+values
+    ( 'appdata' );
 
-INSERT INTO access.table_permissions (table_name, user_role, permissions)
-VALUES ('appdata', 'administrator', B'1111');
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'appdata', 'administrator', B'1111' );
 
-insert into access.table_permissions (table_name, user_role, permissions)
-values ('appdata', 'employee', B'0001');
+insert into
+    access.table_permissions ( table_name, user_role, permissions )
+values
+    ( 'appdata', 'employee', B'0001' );
 
-CREATE FUNCTION public.after_appdata_update() RETURNS trigger AS
+create function public.after_appdata_update() returns trigger as
 $$
-BEGIN
-    new.updated_at := NOW();
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+begin
+    new.updated_at := now();
+    return new;
+end;
+$$ language plpgsql security definer;
 
-CREATE TRIGGER after_update_appdata
-    AFTER UPDATE
-    ON public.appdata
-    FOR EACH ROW
-EXECUTE PROCEDURE public.after_appdata_update();
+create trigger after_update_appdata
+    after update
+    on public.appdata
+    for each row
+execute procedure public.after_appdata_update();

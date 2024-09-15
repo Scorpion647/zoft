@@ -1,21 +1,21 @@
-CREATE SCHEMA IF NOT EXISTS access AUTHORIZATION postgres;
-REVOKE ALL ON SCHEMA access FROM authenticated, anon, PUBLIC;
+create schema if not exists access authorization postgres;
+revoke all on schema access from authenticated, anon, public;
 
-CREATE TYPE access.user_roles AS ENUM ('administrator', 'employee', 'guest');
+create type access.user_roles as enum ('administrator', 'employee', 'guest');
 
-CREATE TABLE IF NOT EXISTS access.table_names
+create table if not exists access.table_names
 (
-    name VARCHAR(40) PRIMARY KEY
+    name varchar(40) primary key
 );
 
-CREATE TABLE IF NOT EXISTS access.table_permissions
+create table if not exists access.table_permissions
 (
-    table_name  VARCHAR(40)       NOT NULL,
-    user_role   access.user_roles NOT NULL,
-    permissions BIT(4)            NOT NULL,
+    table_name  varchar(40)       not null,
+    user_role   access.user_roles not null,
+    permissions bit(4)            not null,
 
-    PRIMARY KEY (table_name, user_role),
-    FOREIGN KEY (table_name) REFERENCES access.table_names (name)
+    primary key (table_name, user_role),
+    foreign key (table_name) references access.table_names (name)
 );
 -- SELECT 0001
 -- INSERT 0010
@@ -23,41 +23,44 @@ CREATE TABLE IF NOT EXISTS access.table_permissions
 -- DELETE 1000
 
 
-CREATE OR REPLACE FUNCTION public.role_has_permission(
-    table_name VARCHAR,
-    user_permission BIT(4)=B'0001', -- SELECT AS DEFAULT
-    user_role access.user_roles=NULL-- DEFAULT TO CURRENT USER ROLE
-) RETURNS BOOLEAN
-AS
+create or replace function public.role_has_permission(
+    table_name varchar,
+    user_permission bit(4) = B'0001', -- SELECT AS DEFAULT
+    user_role access.user_roles = null-- DEFAULT TO CURRENT USER ROLE
+) returns boolean
+as
 $$
-DECLARE
-    _permission BIT(4);
-    _table_name ALIAS FOR table_name;
-    _user_role ALIAS FOR user_role;
-BEGIN
-    IF _user_role IS NULL
-    THEN
-        SELECT p.user_role INTO _user_role FROM public.profiles p WHERE p.profile_id = auth.uid();
+declare
+    _permission bit(4);
+    _table_name alias for table_name;
+    _user_role alias for user_role;
+begin
+    if _user_role is null
+    then
+        select p.user_role into _user_role from public.profiles p where p.profile_id = auth.uid();
 
-        IF NOT found
-        THEN
-            RAISE EXCEPTION 'user_not_found';
-        END IF;
-    END IF;
+        if not found
+        then
+            raise exception 'user_not_found';
+        end if;
+    end if;
 
-    SELECT p.permissions
-    INTO _permission
-    FROM access.table_permissions p
-    WHERE p.table_name = _table_name
-      AND p.user_role = _user_role;
+    select
+        p.permissions
+    into _permission
+    from
+        access.table_permissions p
+    where
+          p.table_name = _table_name
+      and p.user_role = _user_role;
 
-    IF found
-    THEN
-        RETURN (_permission & user_permission) = user_permission;
-    ELSE
-        RETURN FALSE;
-    END IF;
-END;
+    if found
+    then
+        return (_permission & user_permission) = user_permission;
+    else
+        return false;
+    end if;
+end;
 $$
-    LANGUAGE plpgsql SECURITY DEFINER
-                     SET search_path = public;
+    language plpgsql security definer
+                     set search_path = public;
