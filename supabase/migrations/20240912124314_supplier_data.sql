@@ -1,40 +1,34 @@
-create table public.supplier_data
-(
-    supplier_data_id     uuid          default gen_random_uuid(),
-    base_bill_id         uuid                        not null,
-    bill_number          varchar(50)                 not null,
-    trm                  decimal                     not null,
-    billed_quantity      integer                     not null,
-    billed_unit_price    bigint                      not null,
-    billed_total_price   bigint                      not null,
-    gross_weight         decimal                     not null,
-    packages             decimal                     not null,
-    supplier_employee_id int4,
-    created_by           uuid,
-    invoice_id           uuid                        not null,
-    created_at           timestamp
-                             with
-                             time zone default now() not null,
-    modified_at          timestamp
-                             with
-                             time zone default now() not null,
-    conversion_value     decimal                     not null,
-    primary key (supplier_data_id),
-    foreign key (invoice_id) references public.invoice_data (invoice_id) on delete cascade on update cascade,
-    foreign key (base_bill_id) references public.base_bills (
-                                                             base_bill_id
-        ) on delete cascade on update cascade,
-    foreign key (supplier_employee_id) references public.supplier_employees (
-                                                                             supplier_employee_id
-        ) on delete set null on update cascade,
-    foreign key (created_by) references public.profiles (profile_id) on delete set null on update cascade
+CREATE TABLE public.supplier_data (
+  supplier_data_id UUID DEFAULT gen_random_uuid (),
+  base_bill_id UUID NOT NULL,
+  bill_number VARCHAR(50) NOT NULL,
+  trm DECIMAL NOT NULL,
+  billed_quantity INTEGER NOT NULL,
+  billed_unit_price BIGINT NOT NULL,
+  billed_total_price BIGINT NOT NULL,
+  gross_weight DECIMAL NOT NULL,
+  packages DECIMAL NOT NULL,
+  supplier_employee_id int4,
+  created_by UUID,
+  invoice_id UUID NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  modified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  conversion_value DECIMAL NOT NULL,
+  PRIMARY KEY (supplier_data_id),
+  FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON DELETE cascade ON UPDATE cascade,
+  FOREIGN key (base_bill_id) REFERENCES public.base_bills (base_bill_id) ON DELETE cascade ON UPDATE cascade,
+  FOREIGN key (supplier_employee_id) REFERENCES public.supplier_employees (supplier_employee_id) ON DELETE SET NULL ON UPDATE cascade,
+  FOREIGN key (created_by) REFERENCES public.profiles (profile_id) ON DELETE SET NULL ON UPDATE cascade
 );
 
-insert into
-    access.table_names ( name )
-values
-    ( 'supplier_data' );
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'supplier_data', 'administrator', B'1111' );
+
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('supplier_data');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('supplier_data', 'administrator', B'1111');

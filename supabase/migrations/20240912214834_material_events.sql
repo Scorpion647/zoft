@@ -1,37 +1,37 @@
-alter table public.materials
-    enable row level security;
+ALTER TABLE public.materials enable ROW level security;
 
-create policy "Select for materials"
-    on public.materials for select
-    to authenticated using (
-    public.role_has_permission('materials', B'0001')
-        or exists (select
-                       1
-                   from
-                       public.supplier_employees em
-                           inner join public.suppliers using (supplier_id)
-                           inner join public.base_bills using (supplier_id)
-                   where
-                       em.profile_id = auth.uid())
-    );
 
-create policy "Insert for materials" on public.materials for insert to authenticated
-    with
-    check (
-    public.role_has_permission('materials', B'0010')
-    );
+CREATE POLICY "Select for materials" ON public.materials FOR
+SELECT
+  TO authenticated USING (
+    public.role_has_permission ('materials', B'0001')
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees em
+        INNER JOIN public.suppliers USING (supplier_id)
+        INNER JOIN public.base_bills USING (supplier_id)
+      WHERE
+        em.profile_id = auth.uid ()
+    )
+  );
 
-create policy "Update for materials" on public.materials for
-    update to authenticated using (
-    public.role_has_permission('materials', B'0100')
-    );
 
-create policy "Delete for materials" on public.materials for delete to authenticated using (
-    public.role_has_permission('materials', B'1000')
-    );
+CREATE POLICY "Insert for materials" ON public.materials FOR insert TO authenticated
+WITH
+  CHECK (public.role_has_permission ('materials', B'0010'));
 
-create function public.before_materials_update() returns trigger as
-$$
+
+CREATE POLICY "Update for materials" ON public.materials
+FOR UPDATE
+  TO authenticated USING (public.role_has_permission ('materials', B'0100'));
+
+
+CREATE POLICY "Delete for materials" ON public.materials FOR delete TO authenticated USING (public.role_has_permission ('materials', B'1000'));
+
+
+CREATE FUNCTION public.before_materials_update () returns trigger AS $$
 begin
     -- if the user is not an administrator, then the subheading is the only field that can be updated
     if (!public.user_is('administrator')) then
@@ -44,8 +44,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger before_materials_update
-    before update
-    on public.materials
-    for each row
-execute procedure public.before_materials_update();
+
+CREATE TRIGGER before_materials_update before
+UPDATE ON public.materials FOR each ROW
+EXECUTE procedure public.before_materials_update ();

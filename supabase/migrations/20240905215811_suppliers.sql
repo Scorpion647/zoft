@@ -1,108 +1,130 @@
 -- SUPPLIER TABLE
-create table public.suppliers
-(
-    supplier_id serial                                 not null,
-    name        varchar(255)                           not null,
-    domain      varchar(255),
-    created_at  timestamp with time zone default now() not null,
-
-    primary key (supplier_id),
-    unique (domain)
+CREATE TABLE public.suppliers (
+  supplier_id serial NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  domain VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  PRIMARY KEY (supplier_id),
+  UNIQUE (domain)
 );
 
-create function name_domain(supplier public.suppliers) returns text as
-$$
+
+CREATE FUNCTION name_domain (supplier public.suppliers) returns TEXT AS $$
 select $1.name || ' ' || $1.domain;
 $$ language sql immutable;
 
 
 -- permissions
-insert into
-    access.table_names ( name )
-values
-    ( 'suppliers' );
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('suppliers');
 
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'suppliers', 'administrator', B'1111' );
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('suppliers', 'administrator', B'1111');
 
 
 -- SUPPLIER EMPLOYEE TABLE
-create table public.supplier_employees
-(
-    supplier_employee_id serial primary key,
-    profile_id           uuid references public.profiles (
-                                                          profile_id
-        ) on delete cascade on update cascade                   not null,
-    supplier_id          int4 references public.suppliers (
-                                                           supplier_id
-        ) on delete cascade on update cascade                   not null,
-    created_at           timestamp with time zone default now() not null,
-    unique (profile_id, supplier_id)
+CREATE TABLE public.supplier_employees (
+  supplier_employee_id serial PRIMARY KEY,
+  profile_id UUID REFERENCES public.profiles (profile_id) ON DELETE cascade ON UPDATE cascade NOT NULL,
+  supplier_id int4 REFERENCES public.suppliers (supplier_id) ON DELETE cascade ON UPDATE cascade NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  UNIQUE (profile_id, supplier_id)
 );
 
-insert into
-    access.table_names ( name )
-values
-    ( 'supplier_employees' );
 
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'supplier_employees', 'administrator', B'1111' );
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('supplier_employees');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('supplier_employees', 'administrator', B'1111');
+
 
 -- rls for supplier employees
-alter table public.supplier_employees
-    enable row level security;
+ALTER TABLE public.supplier_employees enable ROW level security;
 
-create policy "Select for supplier employees" on public.supplier_employees for select to authenticated using (
-    public.role_has_permission('supplier_employees', B'0001')
-    );
-create policy "Insert for supplier employees" on public.supplier_employees for insert to authenticated with check (
-    public.role_has_permission('supplier_employees', B'0010')
-    );
-create policy "Update for supplier employees" on public.supplier_employees for update to authenticated using (
-    public.role_has_permission('supplier_employees', B'0100')
-    );
-create policy "Delete for supplier employees" on public.supplier_employees for delete to authenticated using (
-    public.role_has_permission('supplier_employees', B'1000')
-    );
-create policy "Employees can select" on public.supplier_employees for select to authenticated using (
-    public.supplier_employees.profile_id = auth.uid()
-    );
+
+CREATE POLICY "Select for supplier employees" ON public.supplier_employees FOR
+SELECT
+  TO authenticated USING (
+    public.role_has_permission ('supplier_employees', B'0001')
+  );
+
+
+CREATE POLICY "Insert for supplier employees" ON public.supplier_employees FOR insert TO authenticated
+WITH
+  CHECK (
+    public.role_has_permission ('supplier_employees', B'0010')
+  );
+
+
+CREATE POLICY "Update for supplier employees" ON public.supplier_employees
+FOR UPDATE
+  TO authenticated USING (
+    public.role_has_permission ('supplier_employees', B'0100')
+  );
+
+
+CREATE POLICY "Delete for supplier employees" ON public.supplier_employees FOR delete TO authenticated USING (
+  public.role_has_permission ('supplier_employees', B'1000')
+);
+
+
+CREATE POLICY "Employees can select" ON public.supplier_employees FOR
+SELECT
+  TO authenticated USING (
+    public.supplier_employees.profile_id = auth.uid ()
+  );
 
 
 -- rls for suppliers
-alter table public.suppliers
-    enable row level security;
+ALTER TABLE public.suppliers enable ROW level security;
 
-create policy "Select for suppliers" on public.suppliers for select to authenticated using (
-    public.role_has_permission('suppliers', B'0001')
-    );
-create policy "Insert for suppliers" on public.suppliers for insert to authenticated with check (
-    public.role_has_permission('suppliers', B'0010')
-    );
-create policy "Update for suppliers" on public.suppliers for update to authenticated using (
-    public.role_has_permission('suppliers', B'0100')
-    );
-create policy "Delete for suppliers" on public.suppliers for delete to authenticated using (
-    public.role_has_permission('suppliers', B'1000')
-    );
-create policy "Employees can select" on public.suppliers for select to authenticated using (
-    exists (select
-                1
-            from
-                public.supplier_employees
-            where
-                  supplier_employees.supplier_id = public.suppliers.supplier_id
-              and supplier_employees.profile_id = auth.uid())
-    );
+
+CREATE POLICY "Select for suppliers" ON public.suppliers FOR
+SELECT
+  TO authenticated USING (public.role_has_permission ('suppliers', B'0001'));
+
+
+CREATE POLICY "Insert for suppliers" ON public.suppliers FOR insert TO authenticated
+WITH
+  CHECK (public.role_has_permission ('suppliers', B'0010'));
+
+
+CREATE POLICY "Update for suppliers" ON public.suppliers
+FOR UPDATE
+  TO authenticated USING (public.role_has_permission ('suppliers', B'0100'));
+
+
+CREATE POLICY "Delete for suppliers" ON public.suppliers FOR delete TO authenticated USING (public.role_has_permission ('suppliers', B'1000'));
+
+
+CREATE POLICY "Employees can select" ON public.suppliers FOR
+SELECT
+  TO authenticated USING (
+    EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees
+      WHERE
+        supplier_employees.supplier_id = public.suppliers.supplier_id
+        AND supplier_employees.profile_id = auth.uid ()
+    )
+  );
 
 
 -- trigger when supplier employee is inserted
-create function public.after_supplier_employee_insert() returns trigger as
-$$
+CREATE FUNCTION public.after_supplier_employee_insert () returns trigger AS $$
 declare
     old_role access.user_roles;
 begin
@@ -116,15 +138,14 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger after_supplier_employee_insert
-    after insert
-    on public.supplier_employees
-    for each row
-execute procedure public.after_supplier_employee_insert();
+
+CREATE TRIGGER after_supplier_employee_insert
+AFTER insert ON public.supplier_employees FOR each ROW
+EXECUTE procedure public.after_supplier_employee_insert ();
+
 
 -- trigger when supplier employee is removed
-create function public.after_supplier_employee_delete() returns trigger as
-$$
+CREATE FUNCTION public.after_supplier_employee_delete () returns trigger AS $$
 declare
     _old_profile public.profiles%rowtype;
 begin
@@ -140,14 +161,13 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger after_supplier_employee_delete
-    after delete
-    on public.supplier_employees
-    for each row
-execute procedure public.after_supplier_employee_delete();
 
-create function public.after_supplier_employee_update() returns trigger as
-$$
+CREATE TRIGGER after_supplier_employee_delete
+AFTER delete ON public.supplier_employees FOR each ROW
+EXECUTE procedure public.after_supplier_employee_delete ();
+
+
+CREATE FUNCTION public.after_supplier_employee_update () returns trigger AS $$
 declare
     _old_profile public.profiles%rowtype;
     _new_profile public.profiles%rowtype;
@@ -173,8 +193,8 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger after_supplier_employee_update
-    after update
-    on public.supplier_employees
-    for each row
-execute procedure public.after_supplier_employee_update();
+
+CREATE TRIGGER after_supplier_employee_update
+AFTER
+UPDATE ON public.supplier_employees FOR each ROW
+EXECUTE procedure public.after_supplier_employee_update ();

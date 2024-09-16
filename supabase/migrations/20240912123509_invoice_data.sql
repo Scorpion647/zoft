@@ -1,19 +1,11 @@
-create table public.invoice_data
-(
-    invoice_id       uuid          default gen_random_uuid() not null,
-    supplier_id      int4                                    not null,
-    created_at       timestamp
-                         with
-                         time zone default now()             not null,
-    updated_at       timestamp
-                         with
-                         time zone default now()             not null,
-    approved         boolean       default false             not null,
-    last_modified_by uuid          default auth.uid(),
-
-    primary key (invoice_id),
-    foreign key (supplier_id) references public.suppliers (supplier_id) on delete cascade on update cascade,
-    foreign key (last_modified_by) references public.profiles (
-                                                               profile_id
-        ) on delete set null on update cascade
+CREATE TABLE public.invoice_data (
+  invoice_id UUID DEFAULT gen_random_uuid () NOT NULL,
+  supplier_id int4 NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  approved BOOLEAN DEFAULT FALSE NOT NULL,
+  last_modified_by UUID DEFAULT auth.uid (),
+  PRIMARY KEY (invoice_id),
+  FOREIGN key (supplier_id) REFERENCES public.suppliers (supplier_id) ON DELETE cascade ON UPDATE cascade,
+  FOREIGN key (last_modified_by) REFERENCES public.profiles (profile_id) ON DELETE SET NULL ON UPDATE cascade
 )

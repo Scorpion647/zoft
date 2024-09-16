@@ -1,42 +1,45 @@
 -- PROFILE TABLE
+CREATE EXTENSION citext
+WITH
+  schema extensions;
 
-create extension citext with schema extensions;
 
-create domain domain_email as extensions.citext
-    check (
-        true
-        );
-create table public.profiles
-(
-    profile_id uuid primary key references auth.users (id) on delete cascade,
-    full_name  varchar(255)             default null,
-    user_role  access.user_roles        default 'guest',
-    email      domain_email             default null unique,
-    created_at timestamp with time zone default now(),
-    updated_at timestamp with time zone default now()
+CREATE DOMAIN domain_email AS extensions.citext CHECK (TRUE);
+
+
+CREATE TABLE public.profiles (
+  profile_id UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE cascade,
+  full_name VARCHAR(255) DEFAULT NULL,
+  user_role access.user_roles DEFAULT 'guest',
+  email domain_email DEFAULT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-alter table public.profiles
-    enable row level security;
 
-insert into
-    access.table_names ( name )
-values
-    ( 'profiles' );
+ALTER TABLE public.profiles enable ROW level security;
 
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'profiles', 'administrator', B'1111' );
 
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'profiles', 'employee', B'0001' | B'0100' );
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('profiles');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('profiles', 'administrator', B'1111');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('profiles', 'employee', B'0001' | B'0100');
+
 
 -- TRIGGER WHEN USER IS INSERTED
-create function public.on_user_insert() returns trigger as
-$$
+CREATE FUNCTION public.on_user_insert () returns trigger AS $$
 declare
     _username varchar(255);
 begin
@@ -49,15 +52,14 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger on_user_insert
-    after insert
-    on auth.users
-    for each row
-execute procedure public.on_user_insert();
+
+CREATE TRIGGER on_user_insert
+AFTER insert ON auth.users FOR each ROW
+EXECUTE procedure public.on_user_insert ();
+
 
 -- TRIGGER WHEN USER IS UPDATED
-create function public.after_user_update() returns trigger as
-$$
+CREATE FUNCTION public.after_user_update () returns trigger AS $$
 declare
     _username varchar(255) default null;
 begin
@@ -75,38 +77,43 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger after_user_update
-    after update
-    on auth.users
-    for each row
-execute procedure public.after_user_update();
+
+CREATE TRIGGER after_user_update
+AFTER
+UPDATE ON auth.users FOR each ROW
+EXECUTE procedure public.after_user_update ();
+
 
 -- TRIGGER WHEN USER IS DELETED
-create function public.after_profile_delete() returns trigger as
-$$
+CREATE FUNCTION public.after_profile_delete () returns trigger AS $$
 begin
     delete from auth.users where auth.users.id = old.profile_id;
     return new;
 end;
 $$ language plpgsql security definer;
 
-create trigger after_profile_delete
-    after delete
-    on public.profiles
-    for each row
-execute procedure public.after_profile_delete();
 
-create policy "Select for profiles" on public.profiles for select to authenticated using (
-    true
-    );
-create policy "Insert for profiles" on public.profiles for insert to authenticated with check (
-    public.role_has_permission('profiles', B'0010')
-    );
-create policy "Update for profiles" on public.profiles for update to authenticated using (
-    public.role_has_permission('profiles', B'0100')
-    );
-create policy "Delete for profiles" on public.profiles for delete to authenticated using (
-    profile_id = auth.uid()
-        or
-    public.role_has_permission('profiles', B'1000')
-    );
+CREATE TRIGGER after_profile_delete
+AFTER delete ON public.profiles FOR each ROW
+EXECUTE procedure public.after_profile_delete ();
+
+
+CREATE POLICY "Select for profiles" ON public.profiles FOR
+SELECT
+  TO authenticated USING (TRUE);
+
+
+CREATE POLICY "Insert for profiles" ON public.profiles FOR insert TO authenticated
+WITH
+  CHECK (public.role_has_permission ('profiles', B'0010'));
+
+
+CREATE POLICY "Update for profiles" ON public.profiles
+FOR UPDATE
+  TO authenticated USING (public.role_has_permission ('profiles', B'0100'));
+
+
+CREATE POLICY "Delete for profiles" ON public.profiles FOR delete TO authenticated USING (
+  profile_id = auth.uid ()
+  OR public.role_has_permission ('profiles', B'1000')
+);

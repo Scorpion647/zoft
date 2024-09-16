@@ -1,67 +1,75 @@
-create type public.material_type as enum (
-    'national', 'foreign', 'nationalized', 'other'
-    );
+CREATE TYPE public.material_type AS ENUM('national', 'foreign', 'nationalized', 'other');
 
-create table if not exists public.materials
-(
-    material_code    varchar(255),
-    subheading       varchar(10) check (length(subheading) = 10 or subheading is null),
-    type             public.material_type,
-    measurement_unit varchar(50),
-    created_at       timestamp
-                         with
-                         time zone default now() not null,
-    primary key (material_code)
+
+CREATE TABLE IF NOT EXISTS public.materials (
+  material_code VARCHAR(255),
+  subheading VARCHAR(10) CHECK (
+    LENGTH(subheading) = 10
+    OR subheading IS NULL
+  ),
+  type public.material_type,
+  measurement_unit VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  PRIMARY KEY (material_code)
 );
 
-insert into
-    access.table_names ( name )
-values
-    ( 'materials' );
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'materials', 'administrator', B'1111' );
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'materials', 'employee', B'0101' );
-create type public.currency as enum ('COP', 'USD', 'EUR');
 
-create domain positive_integer as integer check (value > 0);
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('materials');
 
-create table public.base_bills
-(
-    base_bill_id     uuid          default gen_random_uuid() not null,
-    item             positive_integer                        not null,
-    quantity         positive_integer                        not null default 0,
-    material_code    varchar(50)                             not null,
-    purchase_order   varchar(50)                             not null,
-    measurement_unit varchar(50)                             not null,
-    unit_price       bigint                                  not null,
-    currency         public.currency                         not null,
-    created_at       timestamp
-                         with
-                         time zone default now()             not null,
-    supplier_id      integer                                 not null,
-    description      varchar(50),
-    net_price        bigint,
-    primary key (base_bill_id),
-    foreign key (supplier_id) references public.suppliers (
-                                                           supplier_id
-        ) on delete cascade on update cascade,
-    unique (base_bill_id, purchase_order)
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('materials', 'administrator', B'1111');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('materials', 'employee', B'0101');
+
+
+CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
+
+
+CREATE DOMAIN positive_integer AS INTEGER CHECK (value > 0);
+
+
+CREATE TABLE public.base_bills (
+  base_bill_id UUID DEFAULT gen_random_uuid () NOT NULL,
+  item positive_integer NOT NULL,
+  quantity positive_integer NOT NULL DEFAULT 0,
+  material_code VARCHAR(50) NOT NULL,
+  purchase_order VARCHAR(50) NOT NULL,
+  measurement_unit VARCHAR(50) NOT NULL,
+  unit_price BIGINT NOT NULL,
+  currency public.currency NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  supplier_id INTEGER NOT NULL,
+  description VARCHAR(50),
+  net_price BIGINT,
+  PRIMARY KEY (base_bill_id),
+  FOREIGN key (supplier_id) REFERENCES public.suppliers (supplier_id) ON DELETE cascade ON UPDATE cascade,
+  UNIQUE (base_bill_id, purchase_order)
 );
 
-insert into
-    access.table_names ( name )
-values
-    ( 'base_bills' );
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'base_bills', 'administrator', B'1111' );
-insert into
-    access.table_permissions ( table_name, user_role, permissions )
-values
-    ( 'base_bills', 'employee', B'0001' );
+
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('base_bills');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('base_bills', 'administrator', B'1111');
+
+
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('base_bills', 'employee', B'0001');

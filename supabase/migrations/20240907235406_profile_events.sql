@@ -1,8 +1,7 @@
-create function public.user_is(
-    user_role access.user_roles default 'guest',
-    user_id uuid default auth.uid()
-) returns boolean as
-$$
+CREATE FUNCTION public.user_is (
+  user_role access.user_roles DEFAULT 'guest',
+  user_id UUID DEFAULT auth.uid ()
+) returns BOOLEAN AS $$
 declare
     _user_role alias for user_role;
     _user_id alias for user_id;
@@ -11,9 +10,9 @@ begin
 end;
 $$ language plpgsql security definer;
 
+
 -- trigger when profile is inserted, if it has a domain, check if supplier exists and insert supplier employee
-create function public.check_profile_domain() returns trigger as
-$$
+CREATE FUNCTION public.check_profile_domain () returns trigger AS $$
 declare
     _supplier_id int default null;
 begin
@@ -36,15 +35,15 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger check_profile_domain
-    after insert
-    on public.profiles
-    for each row
-execute procedure public.check_profile_domain();
+
+CREATE TRIGGER check_profile_domain
+AFTER insert ON public.profiles FOR each ROW
+EXECUTE procedure public.check_profile_domain ();
+
 
 --trigger when profile is updated, check the role of the current user to validate the new role
-create or replace function public.profile_role_before_update() returns trigger as
-$$
+CREATE
+OR REPLACE function public.profile_role_before_update () returns trigger AS $$
 begin
     if (current_user = 'postgres') then
         return new;
@@ -62,8 +61,8 @@ begin
 end
 $$ language plpgsql security invoker;
 
-create trigger profile_role_on_update
-    after update
-    on public.profiles
-    for each row
-execute procedure public.profile_role_before_update();
+
+CREATE TRIGGER profile_role_on_update
+AFTER
+UPDATE ON public.profiles FOR each ROW
+EXECUTE procedure public.profile_role_before_update ();

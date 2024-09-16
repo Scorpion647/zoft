@@ -1,26 +1,37 @@
-alter table public.base_bills
-    enable row level security;
+ALTER TABLE public.base_bills enable ROW level security;
 
-create policy "select for base bills" on public.base_bills for select to authenticated using (
-    public.role_has_permission('base_bills', B'0001')
-        or exists (select
-                       1
-                   from
-                       public.supplier_employees em
-                           inner join public.suppliers using (supplier_id)
-                   where
-                       em.supplier_id = public.base_bills.supplier_id and
-                       em.profile_id = auth.uid())
-    );
 
-create policy "insert for base bills" on public.base_bills for insert to authenticated with check (
-    public.role_has_permission('base_bills', B'0010')
-    );
+CREATE POLICY "select for base bills" ON public.base_bills FOR
+SELECT
+  TO authenticated USING (
+    public.role_has_permission ('base_bills', B'0001')
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees em
+        INNER JOIN public.suppliers USING (supplier_id)
+      WHERE
+        em.supplier_id = public.base_bills.supplier_id
+        AND em.profile_id = auth.uid ()
+    )
+  );
 
-create policy "update for base bills" on public.base_bills for update to authenticated using (
-    public.role_has_permission('base_bills', B'0100')
-    );
 
-create policy "delete for base bills" on public.base_bills for delete to authenticated using (
-    public.role_has_permission('base_bills', B'1000')
-    );
+CREATE POLICY "insert for base bills" ON public.base_bills FOR insert TO authenticated
+WITH
+  CHECK (
+    public.role_has_permission ('base_bills', B'0010')
+  );
+
+
+CREATE POLICY "update for base bills" ON public.base_bills
+FOR UPDATE
+  TO authenticated USING (
+    public.role_has_permission ('base_bills', B'0100')
+  );
+
+
+CREATE POLICY "delete for base bills" ON public.base_bills FOR delete TO authenticated USING (
+  public.role_has_permission ('base_bills', B'1000')
+);

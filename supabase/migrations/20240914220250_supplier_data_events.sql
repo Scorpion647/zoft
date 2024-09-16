@@ -1,11 +1,10 @@
-alter table public.supplier_data
-    enable row level security;
+ALTER TABLE public.supplier_data enable ROW level security;
 
-create function public.can_touch_supplier_data(
-    permission_value bit default B'0001',
-    supplier_data_id uuid default null
-) returns boolean as
-$$
+
+CREATE FUNCTION public.can_touch_supplier_data (
+  permission_value BIT DEFAULT B'0001',
+  supplier_data_id UUID DEFAULT NULL
+) returns BOOLEAN AS $$
 declare
     _supplier_data_id alias for supplier_data_id;
 begin
@@ -28,28 +27,45 @@ begin
 end
 $$ language plpgsql;
 
-create policy "can select supplier data" on public.supplier_data for select using (can_touch_supplier_data(B'0001', supplier_data_id));
 
-create policy "can insert supplier data" on public.supplier_data for insert with check (
-    exists (select
-                1
-            from
-                public.supplier_employees employee
-                    inner join public.suppliers supplier using (supplier_id)
-                    inner join public.base_bills bill using (supplier_id)
-            where
-                  employee.profile_id = auth.uid()
-              and employee.supplier_employee_id = supplier_data.supplier_employee_id
-              and supplier_data.base_bill_id = bill.base_bill_id)
-    );
-
-create policy "can update supplier data" on public.supplier_data for update using (can_touch_supplier_data(B'0100', supplier_data_id));
-
-create policy "can delete supplier data" on public.supplier_data for delete using (can_touch_supplier_data(B'1000', supplier_data_id));
+CREATE POLICY "can select supplier data" ON public.supplier_data FOR
+SELECT
+  USING (
+    can_touch_supplier_data (B'0001', supplier_data_id)
+  );
 
 
-create function public.validate_supplier_data() returns trigger as
-$$
+CREATE POLICY "can insert supplier data" ON public.supplier_data FOR insert
+WITH
+  CHECK (
+    EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees employee
+        INNER JOIN public.suppliers supplier USING (supplier_id)
+        INNER JOIN public.base_bills bill USING (supplier_id)
+      WHERE
+        employee.profile_id = auth.uid ()
+        AND employee.supplier_employee_id = supplier_data.supplier_employee_id
+        AND supplier_data.base_bill_id = bill.base_bill_id
+    )
+  );
+
+
+CREATE POLICY "can update supplier data" ON public.supplier_data
+FOR UPDATE
+  USING (
+    can_touch_supplier_data (B'0100', supplier_data_id)
+  );
+
+
+CREATE POLICY "can delete supplier data" ON public.supplier_data FOR delete USING (
+  can_touch_supplier_data (B'1000', supplier_data_id)
+);
+
+
+CREATE FUNCTION public.validate_supplier_data () returns trigger AS $$
 declare
     _base_bill public.base_bills%rowtype;
 begin
@@ -70,34 +86,30 @@ begin
 end
 $$ language plpgsql security invoker;
 
-create trigger "before insert supplier data"
-    before insert
-    on public.supplier_data
-    for each row
-execute procedure public.validate_supplier_data();
 
-create trigger "before update supplier data"
-    before update
-    on public.supplier_data
-    for each row
-execute procedure public.validate_supplier_data();
+CREATE TRIGGER "before insert supplier data" before insert ON public.supplier_data FOR each ROW
+EXECUTE procedure public.validate_supplier_data ();
 
-create function public.supplier_data_after_insert() returns trigger as
-$$
+
+CREATE TRIGGER "before update supplier data" before
+UPDATE ON public.supplier_data FOR each ROW
+EXECUTE procedure public.validate_supplier_data ();
+
+
+CREATE FUNCTION public.supplier_data_after_insert () returns trigger AS $$
 begin
     update public.base_bills set quantity = (quantity - new.billed_quantity) where base_bill_id = new.base_bill_id;
     return new;
 end
 $$ language plpgsql security definer;
 
-create trigger "after insert supplier data"
-    after insert
-    on public.supplier_data
-    for each row
-execute procedure public.supplier_data_after_insert();
 
-create function public.supplier_data_after_update() returns trigger as
-$$
+CREATE TRIGGER "after insert supplier data"
+AFTER insert ON public.supplier_data FOR each ROW
+EXECUTE procedure public.supplier_data_after_insert ();
+
+
+CREATE FUNCTION public.supplier_data_after_update () returns trigger AS $$
 begin
     if (old.billed_quantity <> new.billed_quantity) then
         update public.base_bills
@@ -110,21 +122,20 @@ begin
 end
 $$ language plpgsql security definer;
 
-create trigger "after update supplier data"
-    after update
-    on public.supplier_data
-    for each row
-execute procedure public.supplier_data_after_update();
 
-create function public.supplier_data_after_delete() returns trigger as
-$$
+CREATE TRIGGER "after update supplier data"
+AFTER
+UPDATE ON public.supplier_data FOR each ROW
+EXECUTE procedure public.supplier_data_after_update ();
+
+
+CREATE FUNCTION public.supplier_data_after_delete () returns trigger AS $$
 begin
     update public.base_bills set quantity = (quantity + old.billed_quantity) where base_bill_id = old.base_bill_id;
 end
 $$ language plpgsql security definer;
 
-create trigger "after delete supplier data"
-    after delete
-    on public.supplier_data
-    for each row
-execute procedure public.supplier_data_after_delete();
+
+CREATE TRIGGER "after delete supplier data"
+AFTER delete ON public.supplier_data FOR each ROW
+EXECUTE procedure public.supplier_data_after_delete ();
