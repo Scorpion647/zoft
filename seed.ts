@@ -74,9 +74,9 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
   const { materials } = await seed.materials((x) =>
     x(materialsN, ({ seed }) => ({
       subheading:
-        Math.random() * 99 + 1 < 60
-          ? copycat.oneOfString(seed, subheadings)
-          : null,
+        Math.random() * 99 + 1 < 60 ?
+          copycat.oneOfString(seed, subheadings)
+        : null,
     })),
   );
 

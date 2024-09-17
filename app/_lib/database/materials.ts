@@ -1,24 +1,23 @@
 "use client";
 
-import { createClient } from "../supabase/client";
-import { CustomDataError, manageErrorMessage } from "@/app/_lib/definitions";
-import { SetRequired } from "type-fest";
-import { Tables, TablesInsert, TablesUpdate } from "@/app/_lib/supabase/db";
+import { Tables, TablesInsert, TablesUpdate } from "@lib/database.types";
+import { OrderBy } from "@lib/database.utils";
+import { createClient } from "@lib/supabase/client";
+import { Arrayable, SetRequired, Writable } from "type-fest";
 
 const supabase = createClient();
 
 export async function getMaterial(
   material_code: Tables<"materials">["material_code"],
-): Promise<Tables<"materials"> | CustomDataError | null> {
+) {
   const { data, error } = await supabase
     .from("materials")
     .select("*")
     .eq("material_code", material_code)
     .single();
 
-  if (error) {
-    return manageErrorMessage(error);
-  }
+  if (error) throw error;
+
   return data;
 }
 
@@ -26,23 +25,23 @@ export async function getMaterials(
   page: number = 1,
   limit: number = 10,
   search?: string,
-  order_by?: [
-    keyof Tables<"materials">,
-    { ascending?: boolean; foreignTable?: boolean; nullsFirst?: boolean },
-  ][],
-): Promise<Tables<"materials">[] | CustomDataError | null> {
-  const query = supabase.from("materials").select("*");
+  order?: OrderBy<Tables<"materials">>,
+) {
+  let query = supabase.from("materials").select("*");
 
   if (search && search.trim() !== "") {
-    query.textSearch("name_description", search, {
+    query = query.textSearch("name_description", search, {
       type: "websearch",
     });
   }
 
-  if (order_by && order_by.length > 0) {
-    order_by.forEach(([column, options]) => {
-      query.order(column, options);
-    });
+  if (order) {
+    const orderList = order instanceof Array ? order : [order];
+
+    for (let it of orderList) {
+      const { column, options } = it;
+      query = query.order(column, options);
+    }
   }
 
   const { data, error } = await query.range(
@@ -51,52 +50,54 @@ export async function getMaterials(
   );
 
   if (error) {
-    return manageErrorMessage(error);
+    throw error;
   }
   return data;
 }
 
 export async function insertMaterial(
-  materials: TablesInsert<"materials">[],
-): Promise<CustomDataError | undefined> {
-  for (const material of materials) {
-    const { data, error } = await supabase
-      .from("materials")
-      .insert(material)
-      .select("material_code")
-      .single();
+  material: Writable<Arrayable<TablesInsert<"materials">>>,
+) {
+  const materialList = material instanceof Array ? material : [material];
 
-    if (error || !data.material_code) {
-      return manageErrorMessage(error);
-    }
+  const { data, error } = await supabase
+    .from("materials")
+    .insert(materialList)
+    .select()
+    .returns<Tables<"materials">[]>();
+
+  if (error) {
+    throw error;
   }
+
+  return data;
 }
 
 export async function updateMaterial(
-  data: SetRequired<TablesUpdate<"materials">, "material_code">,
-): Promise<CustomDataError | void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("materials")
-    .update(data)
-    .eq("material_code", data.material_code)
-    .single();
-  if (error) {
-    return manageErrorMessage(error);
+  material: Arrayable<SetRequired<TablesUpdate<"materials">, "material_code">>,
+) {
+  const materialList = material instanceof Array ? material : [material];
+
+  for (const it of materialList) {
+    const { error } = await supabase
+      .from("materials")
+      .update(it)
+      .eq("material_code", it.material_code)
+      .single();
+
+    if (error) throw error;
   }
 }
 
 export async function deleteMaterial(
-  material_code: Tables<"materials">["material_code"],
-): Promise<CustomDataError | void> {
-  const supabase = createClient();
+  material_code: Arrayable<Tables<"materials">["material_code"]>,
+) {
   const { error } = await supabase
     .from("materials")
     .delete()
     .eq("material_code", material_code);
 
   if (error) {
-    return manageErrorMessage(error);
+    throw error;
   }
 }
-

@@ -57,6 +57,21 @@ CREATE TABLE public.base_bills (
 );
 
 
+CREATE FUNCTION base_bill_search (public.base_bills) returns TEXT AS $$
+  select $1.base_bill_id || ' '
+             || $1.item || ' '
+             || $1.quantity || ' '
+             || $1.material_code || ' '
+             || $1.purchase_order || ' '
+             || $1.measurement_unit || ' '
+             || $1.unit_price || ' '
+             || $1.currency || ' '
+             || $1.description || ' '
+             || $1.net_price || ' '
+             || $1.created_at;
+$$ language sql immutable;
+
+
 INSERT INTO
   access.table_names (name)
 VALUES
