@@ -1,7 +1,11 @@
-import { createSeedClient, profilesScalars, SeedClient } from "@snaplet/seed";
+import type { Database } from "@lib/database.types";
 import { copycat } from "@snaplet/copycat";
+import {
+  createSeedClient,
+  profilesScalars,
+  type SeedClient,
+} from "@snaplet/seed";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@lib/supabase/db";
 
 const profilesN = 10;
 const suppliersN = 10;
@@ -17,8 +21,8 @@ const main = async () => {
   await seed.$resetDatabase();
 
   const supabase = createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
   );
 
   for (let i = 0; i < profilesN; i++) {

@@ -1,14 +1,13 @@
-"use client"
-import { FormType } from '@/app/_ui/components/accessForm';
-import { createContext, useContext } from 'react';
-
+"use client";
+import { FormType } from "@/app/_ui/components/accessForm";
+import { createContext, useContext } from "react";
 
 const FormContext = createContext<{
-    formType: FormType;
-    setFormType: (formType: FormType) => void;
+  formType: FormType;
+  setFormType: (formType: FormType) => void;
 }>({
-    formType: FormType.Login,
-    setFormType: () => { },
+  formType: FormType.Login,
+  setFormType: () => {},
 });
 
 export const useFormContext = () => useContext(FormContext);

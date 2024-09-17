@@ -1,154 +1,165 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from "react";
-import 'handsontable/dist/handsontable.full.css';
+import MainButton from "@/app/_ui/component_items/MainButton";
+import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
 import { CreatelargeAdmin, CreateSmallAdmin } from "@/app/_ui/Createstate";
 import { CreateLargeUser, CreateSmallUser } from "@/app/_ui/CreateUser";
-import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
-import { useSharedState } from '@/app/_ui/useSharedState';
-import { FaUserCheck } from "react-icons/fa";
-import { ModalOverlay,FormControl,ModalBody,FormLabel,Tooltip, Modal, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, Icon, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
-import { SearchIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
-import { ImportDataBase } from '@/app/_ui/ImportDataBase'
-import { IoMenu } from "react-icons/io5";
+import { handleExport } from "@/app/_ui/ExportButton";
+import { ImportDataBase } from "@/app/_ui/ImportDataBase";
+import { Tracking_bd } from "@/app/_ui/Tracking_bd";
+import { useSharedState } from "@/app/_ui/useSharedState";
+import {
+  AddIcon,
+  AtSignIcon,
+  AttachmentIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  DownloadIcon,
+  SearchIcon,
+} from "@chakra-ui/icons";
+import {
+  Box,
+  Button,
+  ChakraProvider,
+  Flex,
+  FormControl,
+  FormLabel,
+  HStack,
+  Icon,
+  Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  useDisclosure,
+  VStack,
+} from "@chakra-ui/react";
+import "handsontable/dist/handsontable.full.css";
 import { useRouter } from "next/navigation";
-import MainButton from '@/app/_ui/component_items/MainButton';
-import { handleExport } from '@/app/_ui/ExportButton';
-import {Tracking_bd} from '@/app/_ui/Tracking_bd'
+import { useEffect, useState } from "react";
+import { FaUserCheck } from "react-icons/fa";
+import { IoMenu } from "react-icons/io5";
 
+function _formatCurrency(number: number) {
+  return new Intl.NumberFormat("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number);
+}
 
+export default function Admin() {
+  const { state, updateState } = useSharedState();
+  const [MenuL, setMenuL] = useState(true);
+  const [AddDomain, setAddDomain] = useState(false);
+  const [isInicio, setisInicio] = useState(true);
+  const [isRegistro, setisRegistro] = useState(false);
+  const [isUsuario, setisUsuario] = useState(false);
+  const [isDominio, setisDominio] = useState(false);
+  const [isDatos, setisDatos] = useState(false);
+  const [isTracking, setisTracking] = useState(false);
 
+  const [showRightBox, setShowRightBox] = useState(false);
 
+  const [isScreenSmall, setIsScreenSmall] = useState(window.innerWidth < 1000);
 
-
-
-
-function _formatCurrency(number:number) {
-    return new Intl.NumberFormat('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(number);
-  }
-
-
-export default function Admin(){
-    const { state, updateState } = useSharedState();
-    const [MenuL, setMenuL] = useState(true)
-    const [AddDomain, setAddDomain] = useState(false);
-    const [isInicio, setisInicio] = useState(true);
-    const [isRegistro, setisRegistro] = useState(false);
-    const [isUsuario, setisUsuario] = useState(false);
-    const [isDominio, setisDominio] = useState(false);
-    const [isDatos, setisDatos] = useState(false);
-    const [isTracking, setisTracking] = useState(false);
-
-
-    const [showRightBox, setShowRightBox] = useState(false);
-
-
-
-    const [isScreenSmall, setIsScreenSmall] = useState(window.innerWidth < 1000);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsScreenSmall(window.innerWidth < 1000);
-        };
-
-        window.addEventListener('resize', handleResize);
-
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, []);
-
-
-
-
-    const [isScreenLarge, setIsScreenLarge] = useState(window.innerWidth > 1000);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsScreenLarge(window.innerWidth > 1000);
-        };
-
-        window.addEventListener('resize', handleResize);
-
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, []);
-
-
-    const screen = (numero: number) => {
-
-        if (numero == 1) {
-            setisRegistro(true);
-            setisDatos(false);
-            setisDominio(false);
-            setisUsuario(false);
-            setisInicio(false);
-            setisTracking(false);
-        }
-        if (numero == 2) {
-            setisRegistro(false);
-            setisDatos(false);
-            setisDominio(false);
-            setisUsuario(true);
-            setisInicio(false);
-            setisTracking(false);
-        }
-        if (numero == 3) {
-            setisRegistro(false);
-            setisDatos(false);
-            setisDominio(true);
-            setisUsuario(false);
-            setisInicio(false);
-            setisTracking(false);
-        }
-        if (numero == 4) {
-            setisRegistro(false);
-            setisDatos(true);
-            setisDominio(false);
-            setisUsuario(false);
-            setisInicio(false)
-            setisTracking(false);
-        }
-        if (numero == 5) {
-            setisRegistro(false);
-            setisDatos(false);
-            setisDominio(false);
-            setisUsuario(false);
-            setisInicio(false);
-            setisTracking(true);
-        }
-
-    };
-    const router = useRouter();
-    const handleLogout = async () => {
-        try {
-            const response = await fetch('/logout', {
-                method: 'GET',
-            });
-
-            if (response.ok) {
-                router.push('/');
-            } else {
-                console.error('Failed to log out');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
+  useEffect(() => {
+    const handleResize = () => {
+      setIsScreenSmall(window.innerWidth < 1000);
     };
 
-    const toggleActive = () => {
-        setMenuL(prevState => !prevState);
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const [isScreenLarge, setIsScreenLarge] = useState(window.innerWidth > 1000);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsScreenLarge(window.innerWidth > 1000);
     };
 
+    window.addEventListener("resize", handleResize);
 
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
-const handleVisibilityChange = (visible: any) => {
+  const screen = (numero: number) => {
+    if (numero == 1) {
+      setisRegistro(true);
+      setisDatos(false);
+      setisDominio(false);
+      setisUsuario(false);
+      setisInicio(false);
+      setisTracking(false);
+    }
+    if (numero == 2) {
+      setisRegistro(false);
+      setisDatos(false);
+      setisDominio(false);
+      setisUsuario(true);
+      setisInicio(false);
+      setisTracking(false);
+    }
+    if (numero == 3) {
+      setisRegistro(false);
+      setisDatos(false);
+      setisDominio(true);
+      setisUsuario(false);
+      setisInicio(false);
+      setisTracking(false);
+    }
+    if (numero == 4) {
+      setisRegistro(false);
+      setisDatos(true);
+      setisDominio(false);
+      setisUsuario(false);
+      setisInicio(false);
+      setisTracking(false);
+    }
+    if (numero == 5) {
+      setisRegistro(false);
+      setisDatos(false);
+      setisDominio(false);
+      setisUsuario(false);
+      setisInicio(false);
+      setisTracking(true);
+    }
+  };
+  const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/logout", {
+        method: "GET",
+      });
+
+      if (response.ok) {
+        router.push("/");
+      } else {
+        console.error("Failed to log out");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const toggleActive = () => {
+    setMenuL((prevState) => !prevState);
+  };
+
+  const handleVisibilityChange = (visible: any) => {
     setShowRightBox(visible);
   };
 
@@ -159,389 +170,529 @@ const handleVisibilityChange = (visible: any) => {
   const [error, setError] = useState<string | null>(null);
 
   const handleButtonClick = async (visibledata: any) => {
-      
-    
-    
     setIsLoading(true);
-      setError(null);
-      onOpen();
+    setError(null);
+    onOpen();
 
-      try {
-        console.log(state.TRMNUM)
-          await handleExport(visibledata);
-      } catch (err) {
-          setError('Error al generar el archivo CSV.');
-      } finally {
-          setIsLoading(false);
-          onClose();
-      }
+    try {
+      console.log(state.TRMNUM);
+      await handleExport(visibledata);
+    } catch (err) {
+      setError("Error al generar el archivo CSV.");
+    } finally {
+      setIsLoading(false);
+      onClose();
+    }
   };
 
+  const {
+    isOpen: isOpenSecondModal,
+    onOpen: onOpenSecondModal,
+    onClose: onCloseSecondModal,
+  } = useDisclosure();
 
+  const [inputValue, setInputValue] = useState("");
+  const [updatedValue, setUpdatedValue] = useState("");
 
-  const { isOpen: isOpenSecondModal, onOpen: onOpenSecondModal, onClose: onCloseSecondModal } = useDisclosure();
-
-   const [inputValue, setInputValue] = useState('');
-   const [updatedValue, setUpdatedValue] = useState('');
-
-
-
-
-
-   // Manejo del cambio en el input
-  const handleInputChange = (event:React.ChangeEvent<HTMLInputElement>) => {
+  // Manejo del cambio en el input
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
 
-
   const handleApply = () => {
-    updateState('TRMNUM', inputValue);
-    onCloseSecondModal(); 
+    updateState("TRMNUM", inputValue);
+    onCloseSecondModal();
   };
 
-
-    return (
-        <ChakraProvider>
-            <div className="w-full h-full flex justify-center items-center p-4 bg-gradient-to-tr from-green-900 to-green-700">
-                <div className={`relative flex w-full max-w-6xl  ${(showRightBox && !isScreenSmall) ? 'md:justify-between' : 'justify-center'}`}>
-                    {/* Caja Principal */}
-                    <div className={`relative p-4 bg-gradient-to-tr from-gray-200 to-gray-300 border border-gray-300 text-center rounded-3xl shadow-md  ${showRightBox ? 'md:w-2/3' : 'w-full'} flex flex-col`}>
+  return (
+    <ChakraProvider>
+      <div className="w-full h-full flex justify-center items-center p-4 bg-gradient-to-tr from-green-900 to-green-700">
+        <div
+          className={`relative flex w-full max-w-6xl  ${showRightBox && !isScreenSmall ? "md:justify-between" : "justify-center"}`}>
+          {/* Caja Principal */}
+          <div
+            className={`relative p-4 bg-gradient-to-tr from-gray-200 to-gray-300 border border-gray-300 text-center rounded-3xl shadow-md  ${showRightBox ? "md:w-2/3" : "w-full"} flex flex-col`}>
+            <Flex
+              width="100%"
+              alignItems="center"
+              justifyContent="space-between"
+              p={4}
+              bg="gray.100"
+              className="rounded-2xl"
+              position="relative">
+              <Box position="absolute" right={4}>
+                <Menu>
+                  <MenuButton>
+                    <Button colorScheme="teal" backgroundColor="#F1D803">
+                      <Icon as={IoMenu} w={5} h={5} color="black" />
+                    </Button>
+                  </MenuButton>
+                  <MenuList borderColor="gray.400" p="0">
+                    <MenuItem
+                      bgColor="gray.100"
+                      p="8px 16px"
+                      borderBottom="1px"
+                      className=" font-semibold "
+                      onClick={() => alert("Option 2")}>
+                      Colaboradores
+                    </MenuItem>
+                    <MenuItem
+                      bgColor="gray.100"
+                      p="8px 16px"
+                      borderBottom="1px"
+                      className=" font-semibold "
+                      onClick={onOpenSecondModal}>
+                      Actualizar TRM
+                    </MenuItem>
+                    <MenuItem
+                      bgColor="gray.100"
+                      p="8px 16px"
+                      color="red"
+                      className=" font-semibold "
+                      onClick={handleLogout}>
+                      Cerrar sesion
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+              </Box>
+              <Box flex={1} textAlign="center">
+                <Text fontSize="xl" fontWeight="bold">
+                  Administrador
+                </Text>
+              </Box>
+            </Flex>
+            <HStack height="100%" mt={3} spacing={2} align="stretch">
+              <VStack
+                justify="center"
+                width={MenuL ? "7%" : "20%"}
+                bg="white"
+                border="1px"
+                borderColor="gray.300"
+                backgroundColor="gray.100"
+                borderRadius="md"
+                p={isScreenSmall ? "1" : "3"}
+                align="center"
+                transition="width 0.3s ease-in-out">
+                <VStack align="stretch" justify="center">
+                  <MainButton
+                    onClick={() => screen(1)}
+                    text="Busqueda de Registros"
+                    icon={
+                      <SearchIcon
+                        w={isScreenSmall ? "80%" : "90%"}
+                        h={isScreenSmall ? "80%" : "90%"}
+                        color="black"
+                      />
+                    }
+                    backgroundColor={isRegistro ? "teal" : "#F1D803"}
+                    showRightBox={showRightBox}
+                    isScreenSmall={isScreenSmall}
+                    MenuL={MenuL}
+                  />
+                  <MainButton
+                    onClick={() => screen(2)}
+                    text="Autorizacion de Usuarios"
+                    icon={<CheckCircleIcon w={4} h={4} color="black" />}
+                    backgroundColor={isUsuario ? "teal" : "#F1D803"}
+                    showRightBox={showRightBox}
+                    isScreenSmall={isScreenSmall}
+                    MenuL={MenuL}
+                  />
+                  <MainButton
+                    onClick={() => screen(3)}
+                    text="Dominios"
+                    icon={<AtSignIcon w={4} h={4} color="black" />}
+                    backgroundColor={isDominio ? "teal" : "#F1D803"}
+                    showRightBox={showRightBox}
+                    isScreenSmall={isScreenSmall}
+                    MenuL={MenuL}
+                  />
+                  <MainButton
+                    onClick={() => screen(4)}
+                    text="Base de Datos"
+                    icon={<AttachmentIcon w={4} h={4} color="black" />}
+                    backgroundColor={isDatos ? "teal" : "#F1D803"}
+                    showRightBox={showRightBox}
+                    isScreenSmall={isScreenSmall}
+                    MenuL={MenuL}
+                  />
+                  <MainButton
+                    onClick={() => screen(5)}
+                    text="Descargar CSV"
+                    icon={<DownloadIcon w={4} h={4} color="black" />}
+                    backgroundColor="gray.300"
+                    showRightBox={showRightBox}
+                    isScreenSmall={isScreenSmall}
+                    MenuL={MenuL}
+                  />
+                </VStack>
+                <VStack height="40%"></VStack>
+                {isScreenLarge && !MenuL && (
+                  <HStack
+                    justify="center"
+                    align="center"
+                    bg="gray.200"
+                    spacing="20%"
+                    height="10%">
+                    <Button
+                      position="relative"
+                      colorScheme="transparent"
+                      bg="transparent">
+                      <Text
+                        bottom="5"
+                        borderRadius="100"
+                        backgroundColor="red"
+                        right="1"
+                        position="absolute"
+                        color="white">
+                        5
+                      </Text>
+                      <Icon w={4} h={4} color="black" as={FaUserCheck} />
+                    </Button>
+                    <Button
+                      position="relative"
+                      colorScheme="transparent"
+                      bg="transparent">
+                      <Text
+                        bottom="5"
+                        borderRadius="100"
+                        backgroundColor="red"
+                        fontSize={15}
+                        right="1"
+                        position="absolute"
+                        color="white">
+                        5
+                      </Text>
+                      <CalendarIcon w={4} h={4} color="black" />
+                    </Button>
+                  </HStack>
+                )}
+                {(isScreenSmall || MenuL) && (
+                  <VStack
+                    justify="center"
+                    align="center"
+                    bg="gray.200"
+                    spacing="20%"
+                    height="20%">
+                    <Button
+                      position="relative"
+                      colorScheme="transparent"
+                      bg="transparent">
+                      <Text
+                        bottom="5"
+                        borderRadius="100"
+                        backgroundColor="red"
+                        right="1"
+                        position="absolute"
+                        color="white">
+                        5
+                      </Text>
+                      <Icon w={4} h={4} color="black" as={FaUserCheck} />
+                    </Button>
+                    <Button
+                      position="relative"
+                      colorScheme="transparent"
+                      bg="transparent">
+                      <Text
+                        bottom="5"
+                        borderRadius="100"
+                        backgroundColor="red"
+                        right="1"
+                        position="absolute"
+                        color="white">
+                        5
+                      </Text>
+                      <CalendarIcon w={4} h={4} color="black" />
+                    </Button>
+                  </VStack>
+                )}
+              </VStack>
+              <VStack
+                overflow="auto"
+                flex="1"
+                width="100%"
+                height="500"
+                bg="white"
+                border="1px"
+                borderColor="gray.300"
+                borderRadius="md"
+                className=" p-3"
+                align="stretch">
+                {isRegistro &&
+                  !isUsuario &&
+                  !isDominio &&
+                  !isDatos &&
+                  !isTracking && (
+                    <>
+                      {isScreenLarge && (
+                        <CreatelargeAdmin
+                          sharedState={state}
+                          updateSharedState={updateState}
+                        />
+                      )}
+                      {isScreenSmall && <CreateSmallAdmin />}
+                    </>
+                  )}
+                {!isRegistro &&
+                  isUsuario &&
+                  !isDominio &&
+                  !isDatos &&
+                  !isTracking && (
+                    <>
+                      {isScreenLarge && <CreateLargeUser />}
+                      {isScreenSmall && <CreateSmallUser />}
+                    </>
+                  )}
+                {!isRegistro &&
+                  !isUsuario &&
+                  isDominio &&
+                  !isDatos &&
+                  !isTracking && (
+                    <>
+                      {isScreenLarge && <CreatelargeDomain />}
+                      {isScreenSmall && <CreateSmallDomain />}
+                    </>
+                  )}
+                {!isRegistro &&
+                  !isUsuario &&
+                  !isDominio &&
+                  isDatos &&
+                  !isTracking && (
+                    <>
+                      {isScreenLarge && (
+                        <>
+                          <ImportDataBase />
+                        </>
+                      )}
+                      {isScreenSmall && (
                         <Flex
-                            width="100%"
-                            alignItems="center"
-                            justifyContent="space-between"
-                            p={4}
-                            bg="gray.100"
-                            className="rounded-2xl"
-                            position="relative"
-                        >
-                            <Box position="absolute" right={4}>
-                           
-                                <Menu>
-                                    <MenuButton >
-                                        <Button colorScheme='teal' backgroundColor='#F1D803'>
-                                            <Icon as={IoMenu} w={5} h={5} color='black' />
-                                        </Button>
-                                    </MenuButton>
-                                    <MenuList   borderColor="gray.400" p="0">
-                                        <MenuItem bgColor="gray.100" p="8px 16px" borderBottom="1px" className=' font-semibold ' onClick={() => alert('Option 2')}>Colaboradores</MenuItem>
-                                        <MenuItem bgColor="gray.100" p="8px 16px" borderBottom="1px"  className=' font-semibold ' onClick={onOpenSecondModal}>Actualizar TRM</MenuItem>
-                                        <MenuItem bgColor="gray.100" p="8px 16px"  color="red" className=' font-semibold ' onClick={handleLogout}>Cerrar sesion</MenuItem>
-                                    </MenuList>
-                                </Menu>
+                          w="100%"
+                          className="mt-3 mb-3"
+                          justify="space-between"
+                          align="center">
+                          <HStack>
+                            <Input
+                              fontSize="60%"
+                              width="68%"
+                              border="1px"
+                              backgroundColor="white"
+                              placeholder="Dominio"
+                            />
+                            <Button
+                              width={6}
+                              colorScheme="teal"
+                              backgroundColor="#F1D803">
+                              <SearchIcon
+                                w={5}
+                                h={5}
+                                color="black"></SearchIcon>
+                            </Button>
+                          </HStack>
+                          <Button
+                            width={6}
+                            onClick={() => setAddDomain(true)}
+                            colorScheme="teal"
+                            backgroundColor="#F1D803">
+                            <AddIcon w={5} h={5} color="black"></AddIcon>
+                          </Button>
+                        </Flex>
+                      )}
+                    </>
+                  )}
+                {!isRegistro &&
+                  !isUsuario &&
+                  !isDominio &&
+                  !isDatos &&
+                  isTracking && (
+                    <Tracking_bd onButtonClick={handleButtonClick} />
+                  )}
+              </VStack>
+            </HStack>
 
-                            </Box>
-                            <Box flex={1} textAlign="center">
-                                <Text fontSize="xl" fontWeight="bold">
-                                    Administrador
-                                </Text>
-                            </Box>
-                        </Flex> 
-                        <HStack height='100%' mt={3} spacing={2} align="stretch">
-                            <VStack  justify='center' width={MenuL ? '7%' : '20%'} bg="white" border="1px" borderColor="gray.300" backgroundColor="gray.100" borderRadius="md" p={isScreenSmall ? "1" : "3"} align="center" transition="width 0.3s ease-in-out" >
-                                <VStack align='stretch' justify='center'>
-                                    <MainButton
-                                        onClick={() => screen(1)}
-                                        text="Busqueda de Registros"
-                                        icon={<SearchIcon w={isScreenSmall ? "80%" : "90%"} h={isScreenSmall ? "80%" : "90%"} color="black" />}
-                                        backgroundColor={isRegistro ? 'teal' : '#F1D803'}
-                                        showRightBox={showRightBox}
-                                        isScreenSmall={isScreenSmall}
-                                        MenuL={MenuL}
-                                    />
-                                    <MainButton
-                                        onClick={() => screen(2)}
-                                        text="Autorizacion de Usuarios"
-                                        icon={<CheckCircleIcon w={4} h={4} color="black" />}
-                                        backgroundColor={isUsuario ? 'teal' : '#F1D803'}
-                                        showRightBox={showRightBox}
-                                        isScreenSmall={isScreenSmall}
-                                        MenuL={MenuL}
-                                    />
-                                    <MainButton
-                                        onClick={() => screen(3)}
-                                        text="Dominios"
-                                        icon={<AtSignIcon w={4} h={4} color="black" />}
-                                        backgroundColor={isDominio ? 'teal' : '#F1D803'}
-                                        showRightBox={showRightBox}
-                                        isScreenSmall={isScreenSmall}
-                                        MenuL={MenuL}
-                                    />
-                                    <MainButton
-                                        onClick={() => screen(4)}
-                                        text="Base de Datos"
-                                        icon={<AttachmentIcon w={4} h={4} color="black" />}
-                                        backgroundColor={isDatos ? 'teal' : '#F1D803'}
-                                        showRightBox={showRightBox}
-                                        isScreenSmall={isScreenSmall}
-                                        MenuL={MenuL}
-                                    />
-                                    <MainButton
-                                        onClick={() => screen(5)}
-                                        text="Descargar CSV"
-                                        icon={<DownloadIcon w={4} h={4} color="black" />}
-                                        backgroundColor='gray.300'
-                                        showRightBox={showRightBox}
-                                        isScreenSmall={isScreenSmall}
-                                        MenuL={MenuL}
-                                    />
-                                </VStack>
-                                <VStack height='40%'>
-
-                                </VStack>
-                                {(isScreenLarge && !MenuL) && (<HStack justify='center' align='center' bg='gray.200' spacing='20%' height='10%'>
-                                    <Button position='relative' colorScheme='transparent' bg='transparent'>
-                                        <Text bottom='5' borderRadius='100' backgroundColor='red' right='1' position='absolute' color='white'>5</Text>
-                                        <Icon w={4} h={4} color="black" as={FaUserCheck} />
-                                    </Button>
-                                    <Button position='relative' colorScheme='transparent' bg='transparent'>
-                                        <Text bottom='5' borderRadius='100' backgroundColor='red' fontSize={15} right='1' position='absolute' color='white'>5</Text>
-                                        <CalendarIcon w={4} h={4} color="black" />
-                                    </Button>
-                                </HStack>)}
-                                {(isScreenSmall || MenuL) && (<VStack justify='center' align='center' bg='gray.200' spacing='20%' height='20%'>
-                                    <Button position='relative' colorScheme='transparent' bg='transparent'>
-                                        <Text bottom='5' borderRadius='100' backgroundColor='red' right='1' position='absolute' color='white'>5</Text>
-                                        <Icon w={4} h={4} color="black" as={FaUserCheck} />
-                                    </Button>
-                                    <Button position='relative' colorScheme='transparent' bg='transparent'>
-                                        <Text bottom='5' borderRadius='100' backgroundColor='red' right='1' position='absolute' color='white'>5</Text>
-                                        <CalendarIcon w={4} h={4} color="black" />
-                                    </Button>
-                                </VStack>)}
-                            </VStack>
-                            <VStack
-                                overflow='auto'
-                                flex='1'
-                                width="100%"
-                                height="500"
-                                bg="white"
-                                border="1px"
-                                borderColor="gray.300"
-                                borderRadius="md"
-                                className=" p-3"
-                                align="stretch"  >
-
-                                {isRegistro && !isUsuario && !isDominio && !isDatos && !isTracking && (
-
-                                    <>
-                                        {isScreenLarge && <CreatelargeAdmin sharedState={state} updateSharedState={updateState} />}
-                                        {isScreenSmall && <CreateSmallAdmin />}
-                                    </>
-
-
-
-                                )}
-                                {!isRegistro && isUsuario && !isDominio && !isDatos && !isTracking && (
-
-                                    <>
-                                        {isScreenLarge && <CreateLargeUser />}
-                                        {isScreenSmall && <CreateSmallUser />}
-                                    </>
-
-
-                                )}
-                                {!isRegistro && !isUsuario && isDominio && !isDatos && !isTracking && (
-
-
-                                    <>
-                                        {isScreenLarge && (<CreatelargeDomain/> )}
-                                        {isScreenSmall && (<CreateSmallDomain/> )}
-
-                                        
-
-
-                                    </>
-
-
-                                )}
-                                {!isRegistro && !isUsuario && !isDominio && isDatos && !isTracking && (
-
-                                    <>
-                                        {isScreenLarge && (
-                                            <>
-
-                                                <ImportDataBase   />
-
-
-                                            </>
-
-                                        )}
-                                        {isScreenSmall && (
-                                            <Flex w="100%" className="mt-3 mb-3" justify="space-between" align="center">
-                                                <HStack>
-                                                    <Input fontSize="60%" width='68%' border='1px' backgroundColor='white' placeholder="Dominio" />
-                                                    <Button width={6} colorScheme='teal' backgroundColor='#F1D803'>
-                                                        <SearchIcon w={5} h={5} color='black'></SearchIcon>
-                                                    </Button>
-                                                </HStack >
-                                                <Button width={6} onClick={() => setAddDomain(true)} colorScheme='teal' backgroundColor='#F1D803'>
-                                                    <AddIcon w={5} h={5} color='black'></AddIcon>
-                                                </Button>
-                                            </Flex>
-                                        )}
-
-
-
-
-                                    </>
-
-                                )}
-                                {!isRegistro && !isUsuario && !isDominio && !isDatos && isTracking && (
-                                    <Tracking_bd onButtonClick={handleButtonClick}/>
-                                )}
-                            </VStack>
-                        </HStack>
-
-                        <Modal isOpen={isOpenSecondModal} onClose={onCloseSecondModal}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Actualizar TRM</ModalHeader>
-          <ModalBody>
-            <FormControl>
-              <FormLabel>TRM</FormLabel>
-              <Input
-                type="number"
-                value={inputValue}
-                onChange={handleInputChange}
-              />
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="blue" onClick={handleApply}>
-              Aplicar
-            </Button>
-            <Button variant="ghost" onClick={onCloseSecondModal} ml={3}>
-              Cerrar
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-
-
-
-
-
-                        <Modal isOpen={isOpen} onClose={onClose}>
-                <ModalContent>
-                    <ModalHeader>Exportando CSV</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        {isLoading ? 'Generando archivo...' : 'Archivo generado exitosamente.'}
-                        {error && <p className="text-red-500">{error}</p>}
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button colorScheme="blue" mr={3} onClick={onClose}>
-                            Cerrar
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
+            <Modal isOpen={isOpenSecondModal} onClose={onCloseSecondModal}>
+              <ModalOverlay />
+              <ModalContent>
+                <ModalHeader>Actualizar TRM</ModalHeader>
+                <ModalBody>
+                  <FormControl>
+                    <FormLabel>TRM</FormLabel>
+                    <Input
+                      type="number"
+                      value={inputValue}
+                      onChange={handleInputChange}
+                    />
+                  </FormControl>
+                </ModalBody>
+                <ModalFooter>
+                  <Button colorScheme="blue" onClick={handleApply}>
+                    Aplicar
+                  </Button>
+                  <Button variant="ghost" onClick={onCloseSecondModal} ml={3}>
+                    Cerrar
+                  </Button>
+                </ModalFooter>
+              </ModalContent>
             </Modal>
-                    </div>
 
-                    {AddDomain && (
+            <Modal isOpen={isOpen} onClose={onClose}>
+              <ModalContent>
+                <ModalHeader>Exportando CSV</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                  {isLoading ?
+                    "Generando archivo..."
+                  : "Archivo generado exitosamente."}
+                  {error && <p className="text-red-500">{error}</p>}
+                </ModalBody>
+                <ModalFooter>
+                  <Button colorScheme="blue" mr={3} onClick={onClose}>
+                    Cerrar
+                  </Button>
+                </ModalFooter>
+              </ModalContent>
+            </Modal>
+          </div>
 
-
-
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50  transition-opacity duration-300">
-                            <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20 ">
-                                <h2 className="text-xl font-bold mb-4">Asociar factura</h2>
-                                <p className='font-medium text-lg text-gray-500'>Digite el dominio a agregar</p>
-                                <Input placeholder="Dominio"></Input>
-                                <Box width="70%" height="150" className=" mb-4 " overflow='auto'>
-
-                                </Box>
-                                <HStack textAlign='center' justifyContent="center" alignItems='center'>
-                                    <Button
-                                        bg='red'
-                                        textColor='white'
-                                        className="mt-4 px-4 py- rounded"
-                                        onClick={() => (setAddDomain(false))}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button
-                                        backgroundColor="#F1D803"
-                                        className="mt-4 px-4 py-2 rounded"
-                                        onClick={() => setAddDomain(false)}
-                                    >
-                                        Agregar
-                                    </Button>
-                                </HStack>
-                            </div>
-                        </div>
-                    )}
-
-                {showRightBox && (
-                        <div  className="hidden md:block p-4 bg-white border text-center border-gray-300 rounded-3xl md:w-1/3 ml-4 transition-opacity duration-300">
-                            <h2 className="text-xl font-bold mb-4">Datos de la Orden de Compra</h2>
-
-                            <HStack textAlign='center' justifyContent="center" alignItems='center'>
-                            <VStack  >
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p   className="font-bold flex-1 flex-shrink">Descripcion</p>
-                                <p  className=" flex-1 text-right flex-shrink-0 " >{state.descripcion}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p  className="font-bold flex-1 flex-shrink-0">Proveedor</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">{state.proveedor}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Cantidad O.C</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">{state.cantidadoc}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Precio Unitario O.C</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">{state.preciouni}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p className="font-bold flex-1 flex-shrink">Moneda</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap ">{state.moneda}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Precio Unitario Fact</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${_formatCurrency(state.factunit)}</p>
-                                </HStack>
-                                <HStack justifyContent="space-between" alignItems="flex-start">
-                                <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">Valor Total Fact</p>
-                                <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">${_formatCurrency(state.facttotal)}</p>
-                                </HStack>
-                                
-                                
-                                
-                                
-                                
-                            </VStack>
-                            <VStack textAlign='end' justifyContent="end" alignItems='end'>            
-                            
-                            
-                            
-            
-                            </VStack>
-                            </HStack>
-                            <p className="font-bold mt-3">Suma de las cantidades: {state.columnSum} </p> {/* Muestra el valor de la celda seleccionada */}
-                            <p className="font-bold ">Cantidades: {state.cantidadespor} </p> {/* Muestra la suma de la columna */}
-                            <p className="font-bold ">Peso X material: {state.pesopor} </p>
-                            <p className="font-bold ">Factor de conversion: {state.factor} </p>
-                            <p className="font-bold ">Bulto: {state.bulto} </p>
-                            <button 
-                            className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
-                            onClick={() => setShowRightBox(false)}
-                            >
-                            Cerrar
-                            </button>
-                            
-                        </div>
-                        )}
-
-                </div>
+          {AddDomain && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50  transition-opacity duration-300">
+              <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20 ">
+                <h2 className="text-xl font-bold mb-4">Asociar factura</h2>
+                <p className="font-medium text-lg text-gray-500">
+                  Digite el dominio a agregar
+                </p>
+                <Input placeholder="Dominio"></Input>
+                <Box
+                  width="70%"
+                  height="150"
+                  className=" mb-4 "
+                  overflow="auto"></Box>
+                <HStack
+                  textAlign="center"
+                  justifyContent="center"
+                  alignItems="center">
+                  <Button
+                    bg="red"
+                    textColor="white"
+                    className="mt-4 px-4 py- rounded"
+                    onClick={() => setAddDomain(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    backgroundColor="#F1D803"
+                    className="mt-4 px-4 py-2 rounded"
+                    onClick={() => setAddDomain(false)}>
+                    Agregar
+                  </Button>
+                </HStack>
+              </div>
             </div>
-        </ChakraProvider>
-    );
+          )}
+
+          {showRightBox && (
+            <div className="hidden md:block p-4 bg-white border text-center border-gray-300 rounded-3xl md:w-1/3 ml-4 transition-opacity duration-300">
+              <h2 className="text-xl font-bold mb-4">
+                Datos de la Orden de Compra
+              </h2>
+              <HStack
+                textAlign="center"
+                justifyContent="center"
+                alignItems="center">
+                <VStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink">Descripcion</p>
+                    <p className=" flex-1 text-right flex-shrink-0 ">
+                      {state.descripcion}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink-0">Proveedor</p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">
+                      {state.proveedor}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">
+                      Cantidad O.C
+                    </p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">
+                      {state.cantidadoc}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">
+                      Precio Unitario O.C
+                    </p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">
+                      {state.preciouni}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink">Moneda</p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap ">
+                      {state.moneda}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">
+                      Precio Unitario Fact
+                    </p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">
+                      ${_formatCurrency(state.factunit)}
+                    </p>
+                  </HStack>
+                  <HStack
+                    justifyContent="space-between"
+                    alignItems="flex-start">
+                    <p className="font-bold flex-1 flex-shrink-0 whitespace-nowrap">
+                      Valor Total Fact
+                    </p>
+                    <p className=" flex-1 text-right flex-shrink-0 whitespace-nowrap text-ellipsis">
+                      ${_formatCurrency(state.facttotal)}
+                    </p>
+                  </HStack>
+                </VStack>
+                <VStack
+                  textAlign="end"
+                  justifyContent="end"
+                  alignItems="end"></VStack>
+              </HStack>
+              <p className="font-bold mt-3">
+                Suma de las cantidades: {state.columnSum}{" "}
+              </p>{" "}
+              {/* Muestra el valor de la celda seleccionada */}
+              <p className="font-bold ">
+                Cantidades: {state.cantidadespor}{" "}
+              </p>{" "}
+              {/* Muestra la suma de la columna */}
+              <p className="font-bold ">Peso X material: {state.pesopor} </p>
+              <p className="font-bold ">
+                Factor de conversion: {state.factor}{" "}
+              </p>
+              <p className="font-bold ">Bulto: {state.bulto} </p>
+              <button
+                className="mt-4 px-4 py-2 bg-red-500 text-white rounded"
+                onClick={() => setShowRightBox(false)}>
+                Cerrar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </ChakraProvider>
+  );
 }
-
-
 
 /*
 

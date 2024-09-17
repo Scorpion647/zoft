@@ -1,18 +1,18 @@
 "use client";
 
-import { createClient } from "../supabase/client";
+import { createClient } from "@lib/supabase/client";
 import { CustomDataError, handleError } from "@/app/_lib/definitions";
 import { Except } from "type-fest";
-import { Tables, TablesInsert, TablesUpdate } from "@/app/_lib/supabase/db";
+import { Tables, TablesInsert, TablesUpdate } from "@lib/database.types";
 
 export async function getMaterial(
-  code: Tables<"material">["code"],
-): Promise<Tables<"material"> | CustomDataError | null> {
+  code: Tables<"materials">["material_code"],
+): Promise<Tables<"materials"> | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("material")
+    .from("materials")
     .select("*")
-    .eq("code", code)
+    .eq("material_code", code)
     .single();
 
   if (error) {
@@ -26,12 +26,12 @@ export async function getMaterials(
   limit: number = 10,
   search?: string,
   order_by?: [
-    keyof Tables<"material">,
+    keyof Tables<"materials">,
     { ascending?: boolean; foreignTable?: boolean; nullsFirst?: boolean },
   ][],
-): Promise<Tables<"material">[] | CustomDataError | null> {
+): Promise<Tables<"materials">[] | CustomDataError | null> {
   const supabase = createClient();
-  const query = supabase.from("material").select("*");
+  const query = supabase.from("materials").select("*");
 
   if (search && search.trim() !== "") {
     query.textSearch("name_description", search, {
@@ -57,30 +57,30 @@ export async function getMaterials(
 }
 
 export async function insertMaterial(
-  material: TablesInsert<"material">,
-): Promise<Tables<"material">["code"] | CustomDataError | null> {
+  material: TablesInsert<"materials">,
+): Promise<Tables<"materials">["material_code"] | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("material")
+    .from("materials")
     .insert(material)
-    .select("code")
+    .select("material_code")
     .single();
 
-  if (error || !data.code) {
+  if (error || !data.material_code) {
     return handleError(error);
   }
-  return data.code;
+  return data.material_code;
 }
 
 export async function updateMaterial(
-  code: Tables<"material">["code"],
-  new_data: TablesUpdate<"material">,
+  code: Tables<"materials">["material_code"],
+  new_data: TablesUpdate<"materials">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("material")
+    .from("materials")
     .update(new_data)
-    .eq("code", code)
+    .eq("material_code", code)
     .single();
   if (error) {
     return handleError(error);
@@ -88,10 +88,13 @@ export async function updateMaterial(
 }
 
 export async function deleteMaterial(
-  code: Tables<"material">["code"],
+  code: Tables<"materials">["material_code"],
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
-  const { error } = await supabase.from("material").delete().eq("code", code);
+  const { error } = await supabase
+    .from("materials")
+    .delete()
+    .eq("material_code", code);
 
   if (error) {
     return handleError(error);
@@ -101,11 +104,11 @@ export async function deleteMaterial(
 export async function getRecord(
   purchase_order: string,
   item: number,
-): Promise<Tables<"record"> | CustomDataError | null> {
+): Promise<Tables<"base_bills"> | CustomDataError | null> {
   const supabase = createClient();
 
   const { data, error } = await supabase
-    .from("record")
+    .from("base_bills")
     .select("*")
     .eq("purchase_order", purchase_order)
     .eq("item", item)
@@ -123,12 +126,12 @@ export async function getRecords(
   limit: number = 10,
   search?: string,
   order_by?: [
-    keyof Tables<"record">,
+    keyof Tables<"base_bills">,
     { ascending?: boolean; foreignTable?: boolean; nullsFirst?: boolean },
   ][],
-): Promise<Tables<"record">[] | CustomDataError | null> {
+): Promise<Tables<"base_bills">[] | CustomDataError | null> {
   const supabase = createClient();
-  const query = supabase.from("record").select("*");
+  const query = supabase.from("base_bills").select("*");
 
   if (search && search.trim() !== "") {
     query.textSearch("purchase_order", search, {
@@ -155,29 +158,29 @@ export async function getRecords(
 }
 
 export async function insertRecord(
-  record: TablesInsert<"record">,
-): Promise<Tables<"record">["id"] | CustomDataError | null> {
+  record: TablesInsert<"base_bills">,
+): Promise<Tables<"base_bills">["base_bill_id"] | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("record")
+    .from("base_bills")
     .insert(record)
-    .select("id")
+    .select("base_bill_id")
     .single();
 
-  if (error || !data.id) {
+  if (error || !data.base_bill_id) {
     return handleError(error);
   }
-  return data.id;
+  return data.base_bill_id;
 }
 
 export async function updateRecord(
   purchase_order: string,
   item: string,
-  new_data: TablesUpdate<"record">,
+  new_data: TablesUpdate<"base_bills">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("record")
+    .from("base_bills")
     .update(new_data)
     .eq("purchase_order", purchase_order)
     .eq("item", item)
@@ -189,10 +192,13 @@ export async function updateRecord(
 }
 
 export async function deleteRecord(
-  id: Tables<"record">["id"],
+  id: Tables<"base_bills">["base_bill_id"],
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
-  const { error } = await supabase.from("record").delete().eq("id", id);
+  const { error } = await supabase
+    .from("base_bills")
+    .delete()
+    .eq("base_bill_id", id);
 
   if (error) {
     return handleError(error);
@@ -200,13 +206,13 @@ export async function deleteRecord(
 }
 
 export async function getRecordInfo(
-  record_id: Tables<"record_info">["record_id"],
-): Promise<Tables<"record_info"> | CustomDataError | null> {
+  record_id: Tables<"supplier_data">["base_bill_id"],
+): Promise<Tables<"supplier_data"> | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("record_info")
+    .from("supplier_data")
     .select("*")
-    .eq("record_id", record_id)
+    .eq("base_bill_id", record_id)
     .single();
 
   if (error || !data) {
@@ -220,15 +226,15 @@ export async function getRecordsInfo(
   limit: number = 10,
   search?: string,
   order_by?: [
-    keyof Tables<"record_info">,
+    keyof Tables<"supplier_data">,
     { ascending?: boolean; foreignTable?: boolean; nullsFirst?: boolean },
   ][],
-): Promise<Tables<"record_info">[] | CustomDataError | null> {
+): Promise<Tables<"supplier_data">[] | CustomDataError | null> {
   const supabase = createClient();
-  const query = supabase.from("record_info").select("*");
+  const query = supabase.from("supplier_data").select("*");
 
   if (search && search.trim() !== "") {
-    query.textSearch("record_id", search, {
+    query.textSearch("base_bill_id", search, {
       type: "websearch",
     });
   }
@@ -251,31 +257,33 @@ export async function getRecordsInfo(
 }
 
 export async function insertRecordInfo(
-  info: TablesInsert<"record_info">,
-): Promise<Tables<"record_info">["id"] | CustomDataError | null> {
+  info: TablesInsert<"supplier_data">,
+): Promise<
+  Tables<"supplier_data">["supplier_data_id"] | CustomDataError | null
+> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("record_info")
+    .from("supplier_data")
     .insert(info)
-    .select("id")
+    .select("supplier_data_id")
     .single();
 
-  if (error || !data.id) {
+  if (error || !data.supplier_data_id) {
     return handleError(error);
   }
 
-  return data.id;
+  return data.supplier_data_id;
 }
 
 export async function updateRecordInfo(
-  record_id: Tables<"record_info">["record_id"],
-  new_data: TablesUpdate<"record_info">,
+  record_id: Tables<"supplier_data">["base_bill_id"],
+  new_data: TablesUpdate<"supplier_data">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("record_info")
+    .from("supplier_data")
     .update(new_data)
-    .eq("record_id", record_id);
+    .eq("base_bill_id", record_id);
 
   if (error) {
     return handleError(error);
@@ -283,13 +291,13 @@ export async function updateRecordInfo(
 }
 
 export async function deleteRecordInfo(
-  id: Tables<"record_info">["record_id"],
+  id: Tables<"supplier_data">["base_bill_id"],
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("record_info")
+    .from("supplier_data")
     .delete()
-    .eq("record_id", id);
+    .eq("base_bill_id", id);
 
   if (error) {
     return handleError(error);
@@ -297,15 +305,15 @@ export async function deleteRecordInfo(
 }
 
 export async function getSupplier(
-  id?: Tables<"supplier">["id"],
-  domain?: Tables<"supplier">["domain"],
-  name?: Tables<"supplier">["name"],
-): Promise<Tables<"supplier"> | CustomDataError | null> {
+  id?: Tables<"suppliers">["supplier_id"],
+  domain?: Tables<"suppliers">["domain"],
+  name?: Tables<"suppliers">["name"],
+): Promise<Tables<"suppliers"> | CustomDataError | null> {
   const supabase = createClient();
 
-  const query = supabase.from("supplier").select("*");
+  const query = supabase.from("suppliers").select("*");
   if (id) {
-    query.eq("id", id);
+    query.eq("supplier_id", id);
   }
 
   if (domain) {
@@ -329,12 +337,12 @@ export async function getSuppliers(
   limit: number = 10,
   search: string = "",
   order_by?: [
-    keyof Tables<"supplier">,
+    keyof Tables<"suppliers">,
     { ascending?: boolean; foreignTable?: boolean; nullsFirst?: boolean },
   ][],
-): Promise<Tables<"supplier">[] | CustomDataError | null> {
+): Promise<Tables<"suppliers">[] | CustomDataError | null> {
   const supabase = createClient();
-  const query = supabase.from("supplier").select("*");
+  const query = supabase.from("suppliers").select("*");
 
   if (search && search.trim() !== "") {
     query.textSearch("name_domain", search, {
@@ -360,31 +368,31 @@ export async function getSuppliers(
 }
 
 export async function insertSupplier(
-  args: TablesInsert<"supplier">,
-): Promise<CustomDataError | Tables<"supplier">["id"] | null> {
+  args: TablesInsert<"suppliers">,
+): Promise<CustomDataError | Tables<"suppliers">["supplier_id"] | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("supplier")
+    .from("suppliers")
     .insert(args)
-    .select("id")
+    .select("supplier_id")
     .single();
 
   if (error) {
     return handleError(error);
   }
 
-  return data.id;
+  return data.supplier_id;
 }
 
 export async function updateSupplier(
-  id: Tables<"supplier">["name"],
-  new_data: TablesUpdate<"supplier">,
+  id: Tables<"suppliers">["name"],
+  new_data: TablesUpdate<"suppliers">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("supplier")
+    .from("suppliers")
     .update(new_data)
-    .eq("id", id);
+    .eq("supplier_id", id);
 
   if (error) {
     return handleError(error);
@@ -392,10 +400,13 @@ export async function updateSupplier(
 }
 
 export async function deleteSupplier(
-  args: Tables<"supplier">["id"],
+  args: Tables<"suppliers">["supplier_id"],
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
-  const { error } = await supabase.from("supplier").delete().eq("id", args);
+  const { error } = await supabase
+    .from("suppliers")
+    .delete()
+    .eq("supplier_id", args);
 
   if (error) {
     return handleError(error);
@@ -403,12 +414,12 @@ export async function deleteSupplier(
 }
 
 export async function getEmployees(
-  supplier_id?: Tables<"supplier_employee">["supplier_id"],
+  supplier_id?: Tables<"supplier_employees">["supplier_id"],
   page: number = 1,
   limit: number = 10,
   search?: string,
   order_by?: [
-    keyof Tables<"profile">,
+    keyof Tables<"profiles">,
     {
       ascending?: boolean;
       foreignTable?: boolean;
@@ -418,7 +429,7 @@ export async function getEmployees(
 ) {
   const supabase = createClient();
 
-  const query = supabase.from("supplier_employee").select("profile(*)");
+  const query = supabase.from("supplier_employees").select("profile(*)");
 
   if (supplier_id) {
     query.eq("supplier_id", supplier_id).single();
@@ -449,11 +460,11 @@ export async function getEmployees(
 }
 
 export async function insertEmployee(
-  relation: TablesInsert<"supplier_employee">,
-): Promise<CustomDataError | Tables<"supplier_employee"> | null> {
+  relation: TablesInsert<"supplier_employees">,
+): Promise<CustomDataError | Tables<"supplier_employees"> | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("supplier_employee")
+    .from("supplier_employees")
     .insert(relation)
     .select("*")
     .single();
@@ -466,13 +477,13 @@ export async function insertEmployee(
 }
 
 export async function deleteEmployee(
-  employee_id: Tables<"supplier_employee">["user_id"],
+  employee_id: Tables<"supplier_employees">["profile_id"],
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
   const { error } = await supabase
-    .from("supplier_employee")
+    .from("supplier_employees")
     .delete()
-    .eq("user_id", employee_id);
+    .eq("profile_id", employee_id);
 
   if (error) {
     return handleError(error);
@@ -480,10 +491,10 @@ export async function deleteEmployee(
 }
 
 export async function updateEmployee(
-  new_data: TablesUpdate<"supplier_employee">,
+  new_data: TablesUpdate<"supplier_employees">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
-  const { error } = await supabase.from("supplier_employee").update(new_data);
+  const { error } = await supabase.from("supplier_employees").update(new_data);
 
   if (error) {
     return handleError(error);
@@ -491,13 +502,13 @@ export async function updateEmployee(
 }
 
 export async function getProfile(
-  user_id: Tables<"profile">["user_id"],
-): Promise<Tables<"profile"> | CustomDataError | null> {
+  user_id: Tables<"profiles">["profile_id"],
+): Promise<Tables<"profiles"> | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-    .from("profile")
+    .from("profiles")
     .select("*")
-    .eq("user_id", user_id)
+    .eq("profile_id", user_id)
     .single();
 
   if (error) {
@@ -507,16 +518,16 @@ export async function getProfile(
 }
 
 export async function updateProfile(
-  profile_id: Tables<"profile">["user_id"],
-  data: Except<Tables<"profile">, "created_at" | "user_id">,
+  profile_id: Tables<"profiles">["profile_id"],
+  data: Except<Tables<"profiles">, "created_at" | "profile_id">,
 ): Promise<CustomDataError | void> {
   const supabase = createClient();
-  const { email, full_name, role } = data;
+  const { email, full_name, user_role } = data;
 
   const { error } = await supabase
-    .from("profile")
-    .update({ email, full_name, role })
-    .eq("user_id", profile_id)
+    .from("profiles")
+    .update({ email, full_name, user_role })
+    .eq("profile_id", profile_id)
     .single();
 
   if (error) {
