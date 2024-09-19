@@ -22,6 +22,24 @@ CREATE TABLE public.supplier_data (
 );
 
 
+CREATE FUNCTION supplier_data_search (public.supplier_data) returns TEXT AS $$
+  select
+              $1.bill_number || ' '
+             || $1.trm || ' '
+             || $1.billed_quantity || ' '
+             || $1.billed_unit_price || ' '
+             || $1.billed_total_price || ' '
+             || $1.gross_weight || ' '
+             || $1.packages || ' '
+             || $1.supplier_employee_id || ' '
+             || $1.created_by || ' '
+             || $1.invoice_id || ' '
+             || $1.created_at || ' '
+             || $1.modified_at || ' '
+             || $1.conversion_value;
+$$ language sql immutable;
+
+
 INSERT INTO
   access.table_names (name)
 VALUES

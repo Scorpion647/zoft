@@ -158,6 +158,7 @@ export type Database = {
           measurement_unit: string | null;
           subheading: string | null;
           type: Database["public"]["Enums"]["material_type"] | null;
+          material_search: string | null;
         };
         Insert: {
           created_at?: string;
@@ -227,6 +228,7 @@ export type Database = {
           supplier_data_id: string;
           supplier_employee_id: number | null;
           trm: number;
+          supplier_data_search: string | null;
         };
         Insert: {
           base_bill_id: string;
@@ -335,6 +337,7 @@ export type Database = {
           domain: string | null;
           name: string;
           supplier_id: number;
+          supplier_search: string | null;
         };
         Insert: {
           created_at?: string;
@@ -368,9 +371,9 @@ export type Database = {
         };
         Returns: boolean;
       };
-      name_domain: {
+      material_search: {
         Args: {
-          supplier: unknown;
+          "": unknown;
         };
         Returns: string;
       };
@@ -381,6 +384,18 @@ export type Database = {
           user_role?: "administrator" | "employee" | "guest";
         };
         Returns: boolean;
+      };
+      supplier_data_search: {
+        Args: {
+          "": unknown;
+        };
+        Returns: string;
+      };
+      supplier_search: {
+        Args: {
+          "": unknown;
+        };
+        Returns: string;
       };
       user_is: {
         Args: {

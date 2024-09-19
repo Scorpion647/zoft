@@ -1,13 +1,13 @@
 "use client";
 
 import { Tables, TablesInsert, TablesUpdate } from "@lib/database.types";
-import { OrderBy } from "@lib/database.utils";
 import { createClient } from "@lib/supabase/client";
 import { Arrayable, SetRequired, Writable } from "type-fest";
+import { MultiSelectQuery } from "../database.utils";
 
 const supabase = createClient();
 
-export async function getMaterial(
+export async function selectSingleMaterial(
   material_code: Tables<"materials">["material_code"],
 ) {
   const { data, error } = await supabase
@@ -21,22 +21,19 @@ export async function getMaterial(
   return data;
 }
 
-export async function getMaterials(
-  page: number = 1,
-  limit: number = 10,
-  search?: string,
-  order?: OrderBy<Tables<"materials">>,
+export async function selectMaterials(
+  params: MultiSelectQuery<Tables<"materials">>,
 ) {
   let query = supabase.from("materials").select("*");
 
-  if (search && search.trim() !== "") {
-    query = query.textSearch("name_description", search, {
+  if (params.search && params.search.trim().length > 0) {
+    query = query.textSearch("material_search", params.search, {
       type: "websearch",
     });
   }
-
-  if (order) {
-    const orderList = order instanceof Array ? order : [order];
+  if (params.orderBy) {
+    const orderList =
+      params.orderBy instanceof Array ? params.orderBy : [params.orderBy];
 
     for (let it of orderList) {
       const { column, options } = it;
@@ -44,10 +41,14 @@ export async function getMaterials(
     }
   }
 
-  const { data, error } = await query.range(
-    (page - 1) * limit,
-    page * limit - 1,
-  );
+  const { page, limit } = params;
+
+  query =
+    page ?
+      query.range((page - 1) * limit, page * limit - 1)
+    : query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
@@ -69,7 +70,6 @@ export async function insertMaterial(
   if (error) {
     throw error;
   }
-
   return data;
 }
 

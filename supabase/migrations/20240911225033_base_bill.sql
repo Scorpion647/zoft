@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS public.materials (
 );
 
 
+CREATE FUNCTION material_search (public.materials) returns TEXT AS $$
+  select $1.material_code || ' '
+                    || $1.subheading || ' '
+                    || $1.type || ' '
+                    || $1.measurement_unit || ' '
+                    || $1.created_at;
+$$ language sql immutable;
+
+
 INSERT INTO
   access.table_names (name)
 VALUES

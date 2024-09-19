@@ -1,9 +1,9 @@
 "use client";
 import { createClient } from "@lib/supabase/client";
 import { PostgrestError } from "@supabase/supabase-js";
-import { Arrayable, Writable } from "type-fest";
+import { Arrayable, SetRequired, Writable } from "type-fest";
 import { Tables, TablesInsert, TablesUpdate } from "../database.types";
-import { SelectQuery } from "../database.utils";
+import { MultiSelectQuery } from "../database.utils";
 
 const supabase = createClient();
 
@@ -23,13 +23,18 @@ export async function insertBills(
 }
 
 export async function updateBills(
-  bills: Writable<Arrayable<TablesUpdate<"base_bills">>>,
+  bills: Writable<
+    Arrayable<SetRequired<TablesUpdate<"base_bills">, "base_bill_id">>
+  >,
 ) {
   const billList = bills instanceof Array ? bills : [bills];
 
   const errors: PostgrestError[] = [];
   for (const it of billList) {
-    const { error } = await supabase.from("base_bills").update(it);
+    const { error } = await supabase
+      .from("base_bills")
+      .update(it)
+      .eq("base_bill_id", it.base_bill_id);
 
     if (error) errors.push(error);
   }
@@ -37,45 +42,55 @@ export async function updateBills(
   if (errors.length > 0) throw errors;
 }
 
-export async function deleteBills(billID: Arrayable<Tables<"base_bills">>) {
-  const { data, error } = await supabase
+export async function deleteBills(
+  billID: Arrayable<Tables<"base_bills">["base_bill_id"]>,
+) {
+  const { error } = await supabase
     .from("base_bills")
     .delete()
     .eq("base_bill_id", billID);
+
+  if (error) throw error;
+}
+
+export async function selectSingleBill(
+  id: Tables<"base_bills">["base_bill_id"],
+) {
+  const { data, error } = await supabase
+    .from("base_bills")
+    .select()
+    .eq("base_bill_id", id);
+
+  if (error) throw error;
+
+  return data;
 }
 
 export async function selectBills(
-  params: SelectQuery<Tables<"base_bills">, keyof Tables<"base_bills">>,
+  params: MultiSelectQuery<Tables<"base_bills">>,
 ) {
   let query = supabase.from("base_bills").select();
 
-  if (params instanceof Array) {
-    for (const it of params) {
-      const valueList = it.value instanceof Array ? it.value : [it.value];
-
-      query = query.in(
-        it.key,
-        valueList.filter((value) => !!value),
-      );
-    }
-  } else {
-    if (params.search && params.search.trim().length > 0) {
-      query = query.textSearch("base_bill_search", params.search, {
-        type: "websearch",
-      });
-    }
-
-    if (params.order) {
-      const orderList =
-        params.order instanceof Array ? params.order : [params.order];
-
-      for (const order of orderList) {
-        query = query.order(order.column, order.options);
-      }
-    }
-    const { page, limit } = params;
-    query = query.range((page - 1) * limit, page * limit - 1);
+  if (params.search && params.search.trim().length > 0) {
+    query = query.textSearch("base_bill_search", params.search, {
+      type: "websearch",
+    });
   }
+
+  if (params.orderBy) {
+    const orderList =
+      params.orderBy instanceof Array ? params.orderBy : [params.orderBy];
+
+    for (const order of orderList) {
+      query = query.order(order.column, order.options);
+    }
+  }
+
+  const { page, limit } = params;
+  query =
+    page ?
+      query.range((page - 1) * limit, page * limit - 1)
+    : query.limit(limit);
 
   const { data, error } = await query;
 

@@ -9,8 +9,8 @@ CREATE TABLE public.suppliers (
 );
 
 
-CREATE FUNCTION name_domain (supplier public.suppliers) returns TEXT AS $$
-select $1.name || ' ' || $1.domain;
+CREATE FUNCTION supplier_search (public.suppliers) returns TEXT AS $$
+  select $1.name|| ' ' || $1.domain || ' '
 $$ language sql immutable;
 
 

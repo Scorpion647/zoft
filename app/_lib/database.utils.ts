@@ -1,35 +1,35 @@
-import { Arrayable, PickDeep, RequireAtLeastOne, Writable } from "type-fest";
-import type { Database, Tables } from "./database.types";
+import {
+  Arrayable,
+  RequireAtLeastOne,
+  Simplify,
+  SimplifyDeep,
+} from "type-fest";
+import { Tables } from "./database.types";
+
 interface SupabaseFilterOptions {
   ascending?: boolean;
   foreignTable?: boolean;
   nullsFirst?: boolean;
 }
 
-export interface SingleOrderBy<T> {
+interface SingleOrderBy<T> {
   column: keyof Partial<T>;
-  options: RequireAtLeastOne<
+  options?: RequireAtLeastOne<
     SupabaseFilterOptions,
     keyof SupabaseFilterOptions
   >;
 }
 
-const pa: SingleOrderBy<Tables<"materials">> = {
-  column: "material_code",
-  options: {
-    ascending: true,
-  },
+type OrderBy<T> = SimplifyDeep<Arrayable<SingleOrderBy<T>>>;
+
+const example: MultiSelectQuery<Tables<"materials">> = {
+  limit: 200,
+  orderBy: [{ column: "material_code", options: { ascending: true } }],
 };
 
-export type OrderBy<T> = Arrayable<SingleOrderBy<T>>;
-export type SelectQuery<T, K extends keyof T> =
-  | {
-      key: K;
-      value: Arrayable<T[K]>;
-    }[]
-  | {
-      page: number;
-      limit: number;
-      search?: string;
-      order?: OrderBy<T>;
-    };
+export type MultiSelectQuery<Table> = Simplify<{
+  limit: number;
+  page?: number;
+  search?: string;
+  orderBy?: OrderBy<Table>;
+}>;
