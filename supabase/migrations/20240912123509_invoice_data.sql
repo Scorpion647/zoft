@@ -1,3 +1,4 @@
+--TODO: Remove Approved and add an enum to contain the states
 CREATE TABLE public.invoice_data (
   invoice_id UUID DEFAULT gen_random_uuid () NOT NULL,
   supplier_id int4 NOT NULL,

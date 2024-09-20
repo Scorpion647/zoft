@@ -13,6 +13,7 @@ VALUES
   ('invoice_data', 'administrator', B'1111');
 
 
+-- TODO: Validar mejor esto
 INSERT INTO
   access.table_permissions (table_name, user_role, permissions)
 VALUES
