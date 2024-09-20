@@ -4,7 +4,6 @@ import {
   Simplify,
   SimplifyDeep,
 } from "type-fest";
-import { Tables } from "./database.types";
 
 interface SupabaseFilterOptions {
   ascending?: boolean;
@@ -13,7 +12,7 @@ interface SupabaseFilterOptions {
 }
 
 interface SingleOrderBy<T> {
-  column: keyof Partial<T>;
+  column: keyof T;
   options?: RequireAtLeastOne<
     SupabaseFilterOptions,
     keyof SupabaseFilterOptions
@@ -21,11 +20,6 @@ interface SingleOrderBy<T> {
 }
 
 type OrderBy<T> = SimplifyDeep<Arrayable<SingleOrderBy<T>>>;
-
-const example: MultiSelectQuery<Tables<"materials">> = {
-  limit: 200,
-  orderBy: [{ column: "material_code", options: { ascending: true } }],
-};
 
 export type MultiSelectQuery<Table> = Simplify<{
   limit: number;

@@ -8,7 +8,7 @@ import { MultiSelectQuery } from "../database.utils";
 const supabase = createClient();
 
 export async function insertBills(
-  bill: Writable<Arrayable<TablesInsert<"base_bills">>>,
+  bill: Writable<Arrayable<Omit<TablesInsert<"base_bills">, "base_bill_id">>>,
 ) {
   const billList = bill instanceof Array ? bill : [bill];
 

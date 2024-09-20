@@ -22,7 +22,7 @@ const main = async () => {
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY!,
   );
 
   for (let i = 0; i < profilesN; i++) {
