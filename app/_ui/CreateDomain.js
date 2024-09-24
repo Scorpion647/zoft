@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { Flex, Box, VStack,  HStack,  Button, Text, Input, Icon } from "@chakra-ui/react";
+import { Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,Flex, Box, VStack, HStack, Button, Text, Input, Icon } from "@chakra-ui/react";
 import { SearchIcon, CloseIcon, AddIcon, ArrowBackIcon, ArrowForwardIcon } from "@chakra-ui/icons";
 import { IoMenu } from "react-icons/io5";
 import { IoEllipsisVerticalSharp } from "react-icons/io5";
-import { getSuppliers } from '@/app/_lib/database/service'; 
-import {Gettempleados} from '@/app/_ui/Gettempleados'
+import { getSuppliers } from '@/app/_lib/database/service';
+import { Gettempleados } from '@/app/_ui/Gettempleados'
 
 
 export const CreatelargeDomain = () => {
@@ -19,11 +22,11 @@ export const CreatelargeDomain = () => {
 
     useEffect(() => {
         const fetchSuppliers = async () => {
-            const data = await getSuppliers(currentPage, 5, search);
+            const data = await getSuppliers(currentPage, 8, search);
             if (data) {
                 setSuppliers(data);
 
-                const nextPageData = await getSuppliers(currentPage + 1, 5, search);
+                const nextPageData = await getSuppliers(currentPage + 1, 8, search);
                 setHasNextPage(nextPageData.length > 0);
             } else {
                 setSuppliers([]);
@@ -57,10 +60,24 @@ export const CreatelargeDomain = () => {
         }
     };
 
+    const ChangeEmployeed = () =>{
+        setHola(true)
+    }
     if (!hola && selectedSupplier) {
-        return <Gettempleados supplier={selectedSupplier} />;
+        return <Gettempleados supplier={selectedSupplier} regresar={ChangeEmployeed}/>;
     }
 
+    const handleIconClick = (supplierId) => {
+        // Puedes usar este ID para mostrar el menú
+    };
+    
+    const handleOptionOne = () => {
+        alert("Opción 1 seleccionada");
+    };
+    
+    const handleOptionTwo = () => {
+        alert("Opción 2 seleccionada");
+    };
     return (
         <>
             {hola && (
@@ -108,14 +125,36 @@ export const CreatelargeDomain = () => {
                                             align="center"
                                             justify="center"
                                             w="100%"
-                                            h="50px"
+                                            h="30px"
                                         >
                                             <HStack ml="3%" alignItems="center" justify="start" width="30%">
                                                 <Text>{supplier.domain}</Text>
                                             </HStack>
                                             <Text width="60%">{supplier.name}</Text>
                                             <VStack width="10%">
-                                                <Icon as={IoEllipsisVerticalSharp} w={4} h={4} color='black' />
+                                                <Menu>
+                                                    <MenuButton
+                                                        as={Button}
+                                                        variant="ghost"
+                                                        width={4}
+                                                        height={5}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Evita que el click en el botón se propague a la caja
+                                                        }}
+                                                    >
+                                                        <Icon
+                                                            as={IoEllipsisVerticalSharp}
+                                                            w={4}
+                                                            h={4}
+                                                            color='black'
+                                                            cursor="pointer" // Cambia el cursor a puntero
+                                                        />
+                                                    </MenuButton>
+                                                    <MenuList placement="top" onClick={(e) => e.stopPropagation()}>
+                                                        <MenuItem onClick={handleOptionOne}>Opción 1</MenuItem>
+                                                        <MenuItem onClick={handleOptionTwo}>Opción 2</MenuItem>
+                                                    </MenuList>
+                                                </Menu>
                                             </VStack>
                                         </HStack>
                                     </Box>
@@ -125,33 +164,34 @@ export const CreatelargeDomain = () => {
                             )}
                         </VStack>
 
-                        
+
                     </VStack>
-                    <HStack   width="100%" height="6%" bg="gray.200" justify="center">
-                            <Button
+                    <HStack width="100%" height="6%" bg="gray.200" justify="center">
+                        <Button
                             width="1%"
                             height="60%"
                             bg="#F1D803"
-                                onClick={handlePreviousPage}
-                                disabled={currentPage === 1}
-                                colorScheme="teal"
-                            >
-                                <ArrowBackIcon width={4} height={4} color="black"/>
-                            </Button>
-                            <Text>{currentPage}</Text>
-                            <Button
+                            onClick={handlePreviousPage}
+                            disabled={currentPage === 1}
+                            colorScheme="teal"
+                        >
+                            <ArrowBackIcon width={4} height={4} color="black" />
+                        </Button>
+                        <Text>{currentPage}</Text>
+                        <Button
                             width="1%"
                             height="60%"
                             bg="#F1D803"
-                                onClick={handleNextPage}
-                                disabled={!hasNextPage}
-                                colorScheme="teal"
-                            >
-                                <ArrowForwardIcon width={4} height={4} color="black"/>
-                            </Button>
-                        </HStack>
+                            onClick={handleNextPage}
+                            disabled={!hasNextPage}
+                            colorScheme="teal"
+                        >
+                            <ArrowForwardIcon width={4} height={4} color="black" />
+                        </Button>
+                    </HStack>
                 </>
             )}
+            
         </>
     );
 };
