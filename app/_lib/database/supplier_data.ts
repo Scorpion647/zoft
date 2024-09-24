@@ -5,6 +5,8 @@ import { createClient } from "@lib/supabase/client";
 import { Arrayable, SetRequired, Writable } from "type-fest";
 import { MultiSelectQuery } from "../database.utils";
 import { Prettify } from "@lib/utils/types";
+import { selectSingleSupplierEmployee } from "./supplier_employee";
+import { insertInvoice } from "./invoice_data";
 
 const supabase = createClient();
 
@@ -59,15 +61,54 @@ export async function selectSupplierData(
 }
 
 export async function insertSupplierData(
-  invoice: Writable<Arrayable<TablesInsert<"supplier_data">>>,
+  supplierData: Writable<
+    Arrayable<
+      Prettify<
+        Omit<TablesInsert<"supplier_data">, "supplier_employee_id"> & {
+          supplier_employee_id: number;
+        }
+      >
+    >
+  >,
 ) {
-  const invoiceList = invoice instanceof Array ? invoice : [invoice];
+  let inferedInvoice: Tables<"invoice_data">["invoice_id"] | undefined;
+
+  const supplierDataList = (supplierData =
+    supplierData instanceof Array ? supplierData : [supplierData]);
+
+  let idx = 0;
+
+  for (let item of supplierDataList) {
+    if (!item.invoice_id) {
+      // If there is no infered invoice, create it
+      if (!inferedInvoice) {
+        if (!item.supplier_employee_id) {
+          throw Error(`No supplier employee set for item ${item}`);
+        }
+
+        const employeeData = await selectSingleSupplierEmployee(
+          item.supplier_employee_id,
+        );
+        const invoiceData = await insertInvoice({
+          supplier_id: employeeData.supplier_id,
+        });
+
+        inferedInvoice = invoiceData[0].invoice_id;
+      }
+
+      // Associate the infered invoice with the item whithout invoice
+      if (inferedInvoice) {
+        item.invoice_id = inferedInvoice;
+      }
+    }
+
+    idx++;
+  }
 
   const { data, error } = await supabase
     .from("supplier_data")
-    .insert(invoiceList)
-    .select()
-    .returns<Tables<"supplier_data">[]>();
+    .insert(supplierDataList)
+    .select();
 
   if (error) {
     throw error;
@@ -76,13 +117,14 @@ export async function insertSupplierData(
 }
 
 export async function updateSupplierData(
-  invoice: Arrayable<
+  supplierData: Arrayable<
     SetRequired<TablesUpdate<"supplier_data">, "supplier_data_id">
   >,
 ) {
-  const invoiceList = invoice instanceof Array ? invoice : [invoice];
+  const supplierDataList =
+    supplierData instanceof Array ? supplierData : [supplierData];
 
-  for (const it of invoiceList) {
+  for (const it of supplierDataList) {
     const { error } = await supabase
       .from("supplier_data")
       .update(it)

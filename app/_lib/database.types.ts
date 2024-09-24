@@ -222,7 +222,7 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           gross_weight: number;
-          invoice_id: string;
+          invoice_id: string | null;
           modified_at: string;
           packages: number;
           supplier_data_id: string;
@@ -240,7 +240,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           gross_weight: number;
-          invoice_id: string;
+          invoice_id?: string | null;
           modified_at?: string;
           packages: number;
           supplier_data_id?: string;
@@ -257,7 +257,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           gross_weight?: number;
-          invoice_id?: string;
+          invoice_id?: string | null;
           modified_at?: string;
           packages?: number;
           supplier_data_id?: string;

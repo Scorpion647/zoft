@@ -10,7 +10,7 @@ CREATE TABLE public.supplier_data (
   packages DECIMAL NOT NULL,
   supplier_employee_id int4,
   created_by UUID,
-  invoice_id UUID NOT NULL,
+  invoice_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   modified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   conversion_value DECIMAL NOT NULL,
