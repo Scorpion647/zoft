@@ -6,7 +6,7 @@ import { Arrayable, SetRequired, Writable } from "type-fest";
 import { MultiSelectQuery } from "../database.utils";
 import { Prettify } from "@lib/utils/types";
 import { selectSingleSupplierEmployee } from "./supplier_employee";
-import { insertInvoice } from "./invoice_data";
+import { insertInvoice, selectInvoice_data } from "./invoice_data";
 
 const supabase = createClient();
 
@@ -19,6 +19,18 @@ export async function selectSingleSupplierData(
     .eq("supplier_data_id", supplier_data_id)
     .single();
 
+  if (error) throw error;
+
+  return data;
+}
+
+export async function selectSupplierDataByInvoiceID(
+  invoiceID: Tables<"invoice_data">["invoice_id"],
+) {
+  const { data, error } = await supabase
+    .from("supplier_data")
+    .select()
+    .eq("invoice_id", invoiceID);
   if (error) throw error;
 
   return data;
