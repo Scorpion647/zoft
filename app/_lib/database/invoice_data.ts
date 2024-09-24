@@ -22,6 +22,19 @@ export async function selectSingleInvoice(
   return data;
 }
 
+export async function selectInvoiceBySupplier(
+  supplierID: Tables<"suppliers">["supplier_id"],
+) {
+  const { data, error } = await supabase
+    .from("invoice_data")
+    .select()
+    .eq("supplier_id", supplierID);
+
+  if (error) throw error;
+
+  return data;
+}
+
 export async function selectInvoice_data(
   params: Prettify<Omit<MultiSelectQuery<Tables<"invoice_data">>, "search">>,
 ) {
