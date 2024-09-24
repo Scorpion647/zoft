@@ -677,13 +677,18 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           continue;
         }
   
-        const { base_bill_id, unit_price, material_code, quantity, supplier_id } = matchedRecord;
+        const { base_bill_id, unit_price, material_code, quantity, supplier_id, } = matchedRecord;
   
-        if (id === undefined || id === null) {
+        /*if (id === undefined || id === null) {
           const newInvoice = await insertInvoice({ supplier_id: supplier_id, approved: false });
           id = newInvoice;
-        }
-  
+        }*/
+          if (id === undefined || id === null) {
+            
+            let newInvoice = supplier_id;
+            id = newInvoice;
+            console.log(id)
+          }
         if (subheading !== "**********") {
           const valida = await getMaterial(material_code);
           if (valida.material_code) {
@@ -695,8 +700,8 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   
         const factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
         const totalprice = (factunitprice * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
-        const gross = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.pesototal) / 100)).toFixed(9);
-        const packag = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.bultos) / 100)).toFixed(9);
+        const gross = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.pesototal))).toFixed(9);
+        const packag = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.bultos))).toFixed(9);
         const conver = sharedState.TRM ? 1 : 0;
   
         if (seenPositions.has(record_position)) {
@@ -716,7 +721,6 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             billed_total_price: parseInt(totalprice * 100),
             gross_weight: parseFloat(gross),
             packages: parseFloat(packag),
-            invoice_id: id,
             conversion_value: Number(conver),
           };
   
@@ -752,7 +756,8 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     }
   
     try {
-      await insertSupplierData(records);
+      console.log(id)
+      await insertSupplierData(records,id);
       alert('Registros enviados correctamente.');
       setisTable(false);
     } catch (error) {

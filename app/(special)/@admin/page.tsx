@@ -218,25 +218,25 @@ export default function Admin() {
             <Box position="relative">
  
 
-      {/* Contenido adicional de tu componente */}
+ 
 
       <Box
-        position="fixed" // Fija la posición de la imagen
-        top="0px" // Ajusta la distancia desde el borde superior
-        left="5px" // Ajusta la distancia desde el borde izquierdo
-        zIndex="9999" // Asegúrate de que esté por encima de otros elementos
+        position="fixed" 
+        top="0px" 
+        left="5px" 
+        zIndex="9999" 
       >
         <HStack>
         <Image
-          src="/grupo-ecopetrol.png" // Ruta a la imagen
+          src="/grupo-ecopetrol.png" 
           alt="Descripción de la imagen"
           w="160px"
           h="70px"
 
         />
         <VStack spacing={0} align="start" justify="start" textAlign="start">
-        <Text className=" font-sans" textColor="white">REFINERIA</Text>
-        <Text className=" font-sans" textColor="white">DE CARTAGENA</Text>
+        <Text className=" font-sans" textColor="gray.200">REFINERIA</Text>
+        <Text className=" font-sans" textColor="gray.200">DE CARTAGENA</Text>
         </VStack>
         </HStack>
       </Box>

@@ -8,7 +8,7 @@ import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
 import { getInvoice, getlastmodified, getbase_bill } from '@/app/_lib/database/service';
 import { selectInvoice_data } from '@/app/_lib/database/invoice_data'
-import { selectSingleSupplierData, selectSupplierData } from '@/app/_lib/database/supplier_data'
+import { selectSingleSupplierData, selectSupplierData, selectSupplierDataByInvoiceID } from '@/app/_lib/database/supplier_data'
 import {selectSingleMaterial} from '@/app/_lib/database/materials'
 import { selectBills, selectSingleBill } from '@/app/_lib/database/base_bills'
 import ReturnTable from '@/app/_ui/components/ReturnTable'
@@ -101,22 +101,20 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
     
     setIsLoading(true)
     try{
-      const invoice = await selectInvoice_data({page: 1, limit: 10})
-
+      const invoice = await selectInvoice_data({page: 1, limit: 12})
+      console.log("invoice: ",invoice)
     let Data = []
     
     
      await Promise.all(
       invoice.map(async (invo) => {
         try{
-          const data = await selectSupplierData({orderBy: { column: "modified_at", options: { ascending: false } }, page: 1, limit: 1, search: invo.invoice_id})
-    
-        const material = await selectSingleMaterial("Quae sabint consuetudin putant modo tranquillitter laetitione aut.")
-        console.log("Material: ",material)
-        const supplierData = await selectSingleSupplierData("5f19aacc-7588-51de-9da1-a0efd09fc32e")
-        console.log("SupplierData: ",supplierData)
+          const data = await selectSupplierDataByInvoiceID(invo.invoice_id)
+          console.log("data: ",data[0])
 
-        let date = formatDate(data[0].modified_at)
+  
+
+        let date =  formatDate(data[0].modified_at)
         let estado = "pending"
         if(invo.approved === false && invo.created_at === invo.updated_at){
           estado = "pending"
@@ -130,11 +128,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
         const record = await selectBills({page: 1, limit: 1, search: String(hola)})
         
         let orden = ShortConsecutivo(record[0].purchase_order)
-        console.log(invo.invoice_id,
-          orden,
-          date,
-          estado,)
-          console.log("Esta es Data: ",Data)
+
         Data.push({
           consecutivo: invo.invoice_id,
           orden: orden,
@@ -148,7 +142,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
       })
      )
       
-     console.log("Esta es la data, si llega aqui se hace: ", Data)
+ 
     setFilteredData(Data)
 
     } catch {

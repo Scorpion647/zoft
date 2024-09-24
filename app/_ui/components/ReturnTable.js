@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
 import Handsontable from 'handsontable';
-import { getRecords, getRecordsInfo, updateRecordInfo, getRecordInfo, getMaterial, getSupplier, updateMaterial, getInvoice, getSuplierInvoice, getRecordInvoice, getInvo, insertMaterial, getRecord } from '@/app/_lib/database/service';
+import { getRecords, getRecordsInfo, updateRecordInfo, getRecordInfo, getMaterial, getSupplier, getInvoice, getSuplierInvoice, getRecordInvoice, getInvo, insertMaterial, getRecord } from '@/app/_lib/database/service';
 import { FormControl, FormLabel, Spinner, Switch, Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, Checkbox } from "@chakra-ui/react";
 import {handleExport} from '@/app/_ui/ExportButton'
+import { updateMaterial } from '@/app/_lib/database/materials';
 
 
 function formatMoney(amount) {
@@ -41,7 +42,7 @@ function InfoModal({ isOpen, onClose, cellInfo, onSave }) {
           const materialNational = await getMaterial(`${cellInfo.code}-N`);
           if (materialNational?.material_code) {
             if (!materialNational.type) {
-              await updateMaterial(materialNational.material_code, { type: "national" });
+              await updateMaterial({material_code: materialNational.material_code, type: "national" });
             }
             setTipo(true);
           } else {
@@ -65,8 +66,8 @@ function InfoModal({ isOpen, onClose, cellInfo, onSave }) {
     console.log(cellInfo.code)
     console.log(selectedStatus)
     console.log(unit)
-    const mat = await updateMaterial(cellInfo.code,{type: selectedStatus, measurement_unit: unit})
-    const update = await updateMaterial(String(cellInfo.code),{type: String(selectedStatus),measurement_unit: String(unit)})
+    const hola = await updateMaterial({material_code: cellInfo.code, type: selectedStatus,measurement_unit: unit})
+    console.log("hola", hola)
     onSave({ row: cellInfo.row, code, subp, unit });
     onClose(); 
   };
@@ -368,7 +369,7 @@ const ReturnTable = ({ suppliers, volver }) => {
           type = materialNational.type || tipo;
 
 
-          if (!materialNational.type) await updateMaterial(materialNational.material_code, { type: "national" });
+          if (!materialNational.type) await updateMaterial({material_code: materialNational.material_code, type: "national" });
         }else if(subheading !== undefined && subheading !== null && subheading !== ""){
           const insert = await insertMaterial({code: `${material.material_code}-N`, subheading: subheading, measurement_unit: unidad, type: "national"})
           material_code = `${material.material_code}-N`
@@ -407,9 +408,9 @@ const ReturnTable = ({ suppliers, volver }) => {
           formatMoney(supdata.billed_unit_price / 100), // COP_UNIT
           formatMoney((supdata.billed_unit_price / 100) * supdata.billed_quantity), // COP_TOTAL
           Typematerial(type),                  // TIPO
-          supdata.gross_weight,  // PB
-          supdata.gross_weight,  // PN
-          supdata.packages,      // Bultos
+          supdata.gross_weight*100,  // PB
+          supdata.gross_weight*100,  // PN
+          supdata.packages*100,      // Bultos
           conversion,            // Conversion
           estado                 // Estado
         ]);

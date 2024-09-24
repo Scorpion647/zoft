@@ -15,9 +15,9 @@ import { GridItem,Grid,Modal,
   FormLabel,
   useDisclosure,Tooltip,Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress, Spinner } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
-import {  insertSupplier, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord, updateRecord } from '@/app/_lib/database/service'; 
+import {  insertSupplier,insertMaterial, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord, updateRecord } from '@/app/_lib/database/service'; 
 import { AddIcon, EditIcon } from '@chakra-ui/icons';
-import { insertMaterial } from '../_lib/database/materials';
+
 
 
 const initialData = {
@@ -592,6 +592,13 @@ export const ImportDataBase = () => {
     
     setIsProcessing(false);
     setProgress(100);
+    toast({
+      title: "Formulario enviado",
+          description: ` ${selectedTable} se han enviado correctamente.`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
   };
 
 const getsuplier = async (record) => {
