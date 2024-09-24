@@ -1,141 +1,52 @@
-ALTER TABLE public.supplier_data enable ROW level security;
-
-
-CREATE FUNCTION public.can_touch_supplier_data (
-  permission_value BIT DEFAULT B'0001',
-  supplier_data_id UUID DEFAULT NULL
-) returns BOOLEAN AS $$
-declare
-    _supplier_data_id alias for supplier_data_id;
-begin
-    if (select
-            public.role_has_permission('supplier_data', permission_value)) then
-        return true;
-    end if;
-    if (can_touch_supplier_data.supplier_data_id is not null and
-        exists (select
-                    1
-                from
-                    public.supplier_data data
-                        inner join public.supplier_employees employee using (supplier_employee_id)
-                where
-                      data.supplier_data_id = _supplier_data_id
-                  and employee.profile_id = auth.uid())) then
-        return true;
-    end if;
-    return false;
-end
-$$ language plpgsql;
-
-
-CREATE POLICY "can select supplier data" ON public.supplier_data FOR
-SELECT
-  USING (
-    can_touch_supplier_data (B'0001', supplier_data_id)
-  );
-
-
-CREATE POLICY "can insert supplier data" ON public.supplier_data FOR insert
-WITH
-  CHECK (
-    EXISTS (
-      SELECT
-        1
-      FROM
-        public.supplier_employees employee
-        INNER JOIN public.suppliers supplier USING (supplier_id)
-        INNER JOIN public.base_bills bill USING (supplier_id)
-      WHERE
-        employee.profile_id = auth.uid ()
-        AND employee.supplier_employee_id = supplier_data.supplier_employee_id
-        AND supplier_data.base_bill_id = bill.base_bill_id
-    )
-  );
-
-
-CREATE POLICY "can update supplier data" ON public.supplier_data
-FOR UPDATE
-  USING (
-    can_touch_supplier_data (B'0100', supplier_data_id)
-  );
-
-
-CREATE POLICY "can delete supplier data" ON public.supplier_data FOR delete USING (
-  can_touch_supplier_data (B'1000', supplier_data_id)
+CREATE TABLE public.supplier_data (
+  supplier_data_id UUID DEFAULT gen_random_uuid (),
+  base_bill_id UUID NOT NULL,
+  bill_number VARCHAR(50) NOT NULL,
+  trm DECIMAL NOT NULL,
+  billed_quantity INTEGER NOT NULL,
+  billed_unit_price BIGINT NOT NULL,
+  billed_total_price BIGINT NOT NULL,
+  gross_weight DECIMAL NOT NULL,
+  packages DECIMAL NOT NULL,
+  supplier_employee_id int4,
+  created_by UUID,
+  invoice_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  modified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  conversion_value DECIMAL NOT NULL,
+  PRIMARY KEY (supplier_data_id),
+  FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON DELETE cascade ON UPDATE cascade,
+  FOREIGN key (base_bill_id) REFERENCES public.base_bills (base_bill_id) ON DELETE cascade ON UPDATE cascade,
+  FOREIGN key (supplier_employee_id) REFERENCES public.supplier_employees (supplier_employee_id) ON DELETE SET NULL ON UPDATE cascade,
+  FOREIGN key (created_by) REFERENCES public.profiles (profile_id) ON DELETE SET NULL ON UPDATE cascade
 );
 
 
-CREATE FUNCTION public.validate_supplier_data () returns trigger AS $$
-declare
-    _base_bill public.base_bills%rowtype;
-begin
-    select * into _base_bill from public.base_bills where base_bill_id = new.base_bill_id;
-
-    if _base_bill is null then
-        raise insufficient_privilege using message =
-                'You are not allowed to add or modify supplier data for this base bill';
-    end if;
-
-    if (_base_bill.quantity - new.billed_quantity < 0) then
-        raise data_exception using message =
-                'You cannot bill more than the quantity available. Current quantity: ' || _base_bill.quantity::text ||
-                ' Billed quantity: ' || new.billed_quantity::text;
-    end if;
-
-    return new;
-end
-$$ language plpgsql security invoker;
+CREATE FUNCTION supplier_data_search (public.supplier_data) returns TEXT AS $$
+  select
+              $1.bill_number || ' '
+             || $1.trm || ' '
+             || $1.billed_quantity || ' '
+             || $1.billed_unit_price || ' '
+             || $1.billed_total_price || ' '
+             || $1.gross_weight || ' '
+             || $1.packages || ' '
+             || $1.supplier_employee_id || ' '
+             || $1.created_by || ' '
+             || $1.invoice_id || ' '
+             || $1.created_at || ' '
+             || $1.modified_at || ' '
+             || $1.conversion_value;
+$$ language sql immutable;
 
 
-CREATE TRIGGER "before insert supplier data" before insert ON public.supplier_data FOR each ROW
-EXECUTE procedure public.validate_supplier_data ();
+INSERT INTO
+  access.table_names (name)
+VALUES
+  ('supplier_data');
 
 
-CREATE TRIGGER "before update supplier data" before
-UPDATE ON public.supplier_data FOR each ROW
-EXECUTE procedure public.validate_supplier_data ();
-
-
-CREATE FUNCTION public.supplier_data_after_insert () returns trigger AS $$
-begin
-    update public.base_bills set quantity = (quantity - new.billed_quantity) where base_bill_id = new.base_bill_id;
-    return new;
-end
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER "after insert supplier data"
-AFTER insert ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_insert ();
-
-
-CREATE FUNCTION public.supplier_data_after_update () returns trigger AS $$
-begin
-    if (old.billed_quantity <> new.billed_quantity) then
-        update public.base_bills
-        set
-            quantity = (quantity + old.billed_quantity - new.billed_quantity)
-        where
-            base_bill_id = new.base_bill_id;
-    end if;
-    return new;
-end
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER "after update supplier data"
-AFTER
-UPDATE ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_update ();
-
-
-CREATE FUNCTION public.supplier_data_after_delete () returns trigger AS $$
-begin
-    update public.base_bills set quantity = (quantity + old.billed_quantity) where base_bill_id = old.base_bill_id;
-end
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER "after delete supplier data"
-AFTER delete ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_delete ();
+INSERT INTO
+  access.table_permissions (table_name, user_role, permissions)
+VALUES
+  ('supplier_data', 'administrator', B'1111');
