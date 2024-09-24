@@ -1,15 +1,20 @@
-
 'use client';
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
-import { Spinner,Switch,Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'; 
+import { FormControl, FormLabel, Spinner, Switch, Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, Checkbox } from "@chakra-ui/react";
 import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
-import { getRecords, getMaterial, getMaterials, getRecordsInfo, getSupplier, insertRecordInfo, getRecord, updateMaterial } from '@/app/_lib/database/service';
+import { getInvoice, getlastmodified, getbase_bill } from '@/app/_lib/database/service';
+import { selectInvoice_data } from '@/app/_lib/database/invoice_data'
+import { selectSingleSupplierData, selectSupplierData } from '@/app/_lib/database/supplier_data'
+import {selectSingleMaterial} from '@/app/_lib/database/materials'
+import { selectBills, selectSingleBill } from '@/app/_lib/database/base_bills'
 import ReturnTable from '@/app/_ui/components/ReturnTable'
-import {Associate_invoice} from '@/app/_ui/Associate_invoice'
+import { Associate_invoice } from '@/app/_ui/Associate_invoice'
+import { handleExport } from '@/app/_ui/ExportButton'
+import { getRole } from "../_lib/supabase/client";
 
 
 
@@ -22,55 +27,6 @@ function formatDate(dateString) {
 }
 
 
-
-function groupByPurchaseOrder(recordsInfo, records) {
-  const groupedData = {};
-
-
-  const recordIdToOrder = records.reduce((acc, record) => {
-    if (record.id && record.purchase_order) {
-      acc[record.id] = record.purchase_order;
-    } else {
-      console.warn(`Record without purchase_order:`, record);
-    }
-    return acc;
-  }, {});
-
-
-  recordsInfo.forEach(item => {
-    const order = recordIdToOrder[item.record_id];
-    if (!order) {
-      console.warn(`No purchase_order found for record_id: ${item.record_id}`);
-      return; 
-    }
-
-    if (!groupedData[order]) {
-      groupedData[order] = {
-        fecha: item.created_at,
-        estado: item.status,
-        record_ids: [],
-      };
-    }
-
-    if (new Date(item.modified_at || item.created_at) > new Date(groupedData[order].fecha)) {
-      groupedData[order].fecha = item.modified_at || item.created_at;
-    }
-
-    if (item.status === "rejected") {
-      groupedData[order].estado = "rejected";
-    } else if (item.status === "pending" && groupedData[order].estado !== "rejected") {
-      groupedData[order].estado = "pending";
-    }
-    groupedData[order].record_ids.push(item.record_id);
-  });
-
-
-  return Object.entries(groupedData).map(([order, { fecha, estado }]) => ({
-    orden: order, 
-    fecha: formatDate(fecha),
-    estado,
-  }));
-}
 
 
 
@@ -115,123 +71,106 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [isTable, setisTable] = useState(false);
   const [IsLoading,setIsLoading] = useState(false)
+  const [selectedSupplier2,setselectedSupplier2] = useState()
+  
 
 
 
-
-
+  const [IsAdmin,setIsAdmin] = useState(false)
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
-    if (isTable === false) {
-      console.log("Cargando datos...");
-      setIsLoading(true);
+    const Validar = async () => {
+      const role = await getRole();
+    if(role === "administrator"){
+      setIsAdmin(true)
+    }
+    }
+    Validar()
+   }, []);
   
-      const fetchData = async () => {
-        try {
-          let allRecords = [];
-          let page = 1;
-          const limit = 10000;
-          let hasMoreRecords = true;
   
-          while (hasMoreRecords) {
-            console.log(`Fetching records - Page: ${page}, Limit: ${limit}`);
-            const records = await getRecords(page, limit);
-  
-            if (Array.isArray(records) && records.length > 0) {
-              console.log(`Records fetched: ${records.length}`);
-              allRecords = allRecords.concat(records);
-  
-              if (records.length < limit) {
-                hasMoreRecords = false; 
-              } else {
-                page += 1;
-              }
-            } else {
-              console.log('No more records to fetch');
-              hasMoreRecords = false;
-            }
-          }
-  
-          let allRecordsInfo = [];
-          const recordIds = allRecords.map(record => record.id);
-  
-          for (let i = 0; i < recordIds.length; i += limit) {
-            const batch = recordIds.slice(i, i + limit);
-            console.log(`Fetching records info - Batch: ${i / limit + 1}, Limit: ${limit}`);
-            const recordsInfo = await getRecordsInfo(1, limit); 
-  
-            if (Array.isArray(recordsInfo) && recordsInfo.length > 0) {
-              console.log(`Records Info fetched: ${recordsInfo.length}`);
-              allRecordsInfo = allRecordsInfo.concat(recordsInfo);
-            } else {
-              console.log('No more records info to fetch');
-              break;
-            }
-          }
-  
-          if (allRecordsInfo.length > 0) {
-            const groupedData = groupByPurchaseOrder(allRecordsInfo, allRecords);
-            console.log('Final Grouped Data:', groupedData);
-            setFilteredData(groupedData);
-          }
-        } catch (error) {
-          console.error("Error al obtener datos:", error);
-        } finally {
-          setIsLoading(false);
+  const ShortConsecutivo = (e) => {
+    let consecutivo = String(e).slice(0,8)
+    return consecutivo
+  }
+
+
+
+  const fetchData = async () => {
+    
+    setIsLoading(true)
+    try{
+      const invoice = await selectInvoice_data({page: 1, limit: 10})
+
+    let Data = []
+    
+    
+     await Promise.all(
+      invoice.map(async (invo) => {
+        try{
+          const data = await selectSupplierData({orderBy: { column: "modified_at", options: { ascending: false } }, page: 1, limit: 1, search: invo.invoice_id})
+    
+        const material = await selectSingleMaterial("Quae sabint consuetudin putant modo tranquillitter laetitione aut.")
+        console.log("Material: ",material)
+        const supplierData = await selectSingleSupplierData("5f19aacc-7588-51de-9da1-a0efd09fc32e")
+        console.log("SupplierData: ",supplierData)
+
+        let date = formatDate(data[0].modified_at)
+        let estado = "pending"
+        if(invo.approved === false && invo.created_at === invo.updated_at){
+          estado = "pending"
+        }else if(invo.approved === false && invo.created_at !== invo.updated_at){
+          estado = "rejected"
+        }else if(invo.approved === true){
+          estado = "approved"
         }
-      };
-  
-      fetchData();
+        let hola = data[0].base_bill_id;
+
+        const record = await selectBills({page: 1, limit: 1, search: String(hola)})
+        
+        let orden = ShortConsecutivo(record[0].purchase_order)
+        console.log(invo.invoice_id,
+          orden,
+          date,
+          estado,)
+          console.log("Esta es Data: ",Data)
+        Data.push({
+          consecutivo: invo.invoice_id,
+          orden: orden,
+          fecha: date,
+          estado: estado,
+        });
+        }
+        catch (err) {
+          console.error("Error fetching data for invoice", invo.invoice_id, err);
+        }
+      })
+     )
+      
+     console.log("Esta es la data, si llega aqui se hace: ", Data)
+    setFilteredData(Data)
+
+    } catch {
+      console.log("En algun punto fallamos")
+    } finally {
+      setIsLoading(false)
     }
+  }
+  useEffect(() => {
+   fetchData()
   }, [isTable]);
-  
-  
-  
-
-  useEffect(() => {
-    console.log("IsLoading:", IsLoading);
-  }, [IsLoading]);
 
   
+  
 
-  const handleSupplierClickk = (item) => {
-    console.log(item.estado)
-    if (item.estado === "SUCCESS" || item.estado === "PENDING") {
-      console.log(item.estado)
-      router.push(`/success-or-pending/${item.orden}`);
-    } else if (item.estado === "ERROR") {
-      router.push(`/error/${item.orden}`);
-      console.log(item.estado)
-    }
-  };
+const ChangeReturn = (e) => {
+setselectedSupplier2(e)
+sethola(true)
+}
 
-
-
-
-
-  const handleFilterClick = () => {
-    if (inputValue.trim() !== '') {
-      setFilteredValue(inputValue.trim());
-    } else {
-      setFilteredValue('');
-    }
-  };
-
-  const [selectedSupplier2, setSelectedSupplier2] = useState("");
-
-  const handleSupplierClick = (supplier) => {
-
-    setSelectedSupplier2(supplier.orden);
-  };
-
-  useEffect(() => {
-    
-  }, [selectedSupplier2]);
-
-  if (!hola && selectedSupplier2) {
-    sethola(true)
-    
+const ChangeHola = (e) => {
+  sethola(false)
   }
 
 
@@ -253,7 +192,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
                     backgroundColor='white'
                     placeholder="Orden de compra"
                   />
-                  <Button onClick={handleFilterClick} colorScheme='teal' backgroundColor='#F1D803'>
+                  <Button  colorScheme='teal' backgroundColor='#F1D803'>
                     <SearchIcon w={5} h={5} color='black' />
                   </Button>
                 </HStack>
@@ -269,6 +208,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
                   ))}
                 </Select>
                 <Select
+                  mr="2"
                   border="1px"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
@@ -277,17 +217,24 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
                 >
                   <option value="TODOS">Todos</option>
                   <option value="APROBADO">Aprobados</option>
-                  <option value="EN PROCESO">En Proceso</option>
+                  <option value="PENDIENTE">En Proceso</option>
                   <option value="RECHAZADO">Rechazados</option>
                 </Select>
-                <Button mr="2" onClick={() => setisTable(true)} colorScheme='teal' backgroundColor='#F1D803'>
+                {IsAdmin && (
+                  <Button mr="2" onClick={() => setisTable(true)} colorScheme='teal' backgroundColor='#F1D803'>
                   <AddIcon w={5} h={5} color='black' />
                 </Button>
+                )}
+                
+                
               </Flex>
               <HStack  borderColor="gray.300"  whiteSpace="nowrap" className="rounded-2xl" justifyContent='center' alignItems="center" bg="gray.200" w="100%" h="10%">
                 <HStack bgColor="white" align="center" justify="center" w="100%" h="100%">
-                  <HStack overflowX="clip" ml='3%' alignItems="center" justify="start" w="40%">
-                    <Text className="font-bold" fontSize='100%'>orden </Text>
+                  <HStack overflowX="clip" ml='3%' alignItems="center" justify="start" w="30%">
+                    <Text ml={4} className="font-bold" fontSize='100%'>ID Fact</Text>
+                  </HStack>
+                  <HStack alignItems="center" justify="center" w="20%">
+                    <Text marginRight={2} className="font-bold" fontSize='100%'>orden</Text>
                   </HStack>
                   <HStack spacing={8} alignItems="center" justify="center" w="30%">
                     <Text marginRight={2} className="font-bold" fontSize='100%'>Fecha</Text>
@@ -309,7 +256,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
                   {filteredData.map((item) => (
                     <VStack w="100%" key={item.orden}>
                       <Button
-                        onClick={() => handleSupplierClick(item)}
+                        onClick={() => ChangeReturn(item.consecutivo)}
                         whiteSpace="nowrap"
                         paddingRight={2}
                         paddingLeft={2}
@@ -321,11 +268,14 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
                         h="10"
                       >
                         <HStack marginTop="1%" className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
-                          <HStack ml="3%" alignItems="center" justify="start" w="40%">
-                            <Text className="font-bold" fontSize="100%">{item.orden}</Text>
+                          <HStack ml="3%" alignItems="center" justify="start" w="30%">
+                            <Text className="font-bold" fontSize="100%">{ShortConsecutivo(item.consecutivo)}</Text>
+                          </HStack>
+                          <HStack  alignItems="center" justify="center" w="20%">
+                            <Text className=" font-light" fontSize="100%">{item.orden}</Text>
                           </HStack>
                           <HStack spacing={4} alignItems="center" justify="center" w="30%">
-                            <Text fontSize="100%">{item.fecha}</Text>
+                            <Text className=" font-light" fontSize="100%">{item.fecha}</Text>
                           </HStack>
                           <HStack mr="3%" spacing={4} alignItems="center" justify="center" w="30%">
                             <Text
@@ -363,7 +313,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
           
         </>
       )}
-{hola && (<ReturnTable suppliers={selectedSupplier2} />)}
+{hola && (<ReturnTable suppliers={selectedSupplier2} volver={() => ChangeHola()} />)}
     </>
 
   );
@@ -371,193 +321,5 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
 }
 
 
-export const CreateSmallAdmin = () => {
-
-  const [inputValue, setInputValue] = useState('');
-  const [filteredValue, setFilteredValue] = useState('');
 
 
-  const filteredData = create.filter(item =>
-    item.orden.startsWith(filteredValue)
-
-  );
-
-  const handleFilterClick = () => {
-    if (inputValue.trim() !== '') {
-      setFilteredValue(inputValue.trim());
-    } else {
-      setFilteredValue('');
-    }
-  };
-  const router = useRouter();
-  const Rechazo = () => {
-    router.push('/Rechazo');
-  };
-
-
-
-
-  return (
-    <>
-      <Flex className="rounded-2xl" w="100%" justify="space-between" align="center">
-        <HStack ml={2}>
-          <Input value={inputValue} onChange={(e) => setInputValue(e.target.value)} width='60%' fontSize="60%" border='1px' backgroundColor='white' placeholder="Orden de Compra"></Input>
-          <Button width={6} onClick={handleFilterClick} colorScheme='teal' backgroundColor='#F1D803'>
-            <SearchIcon w={5} h={5} color='black'></SearchIcon>
-          </Button>
-        </HStack >
-        <Button width={6} onClick={() => setAddtable(true)} colorScheme='teal' backgroundColor='#F1D803'>
-          <AddIcon w={5} h={5} color='black'></AddIcon>
-        </Button>
-      </Flex>
-
-
-
-      <Box overflow='auto' w='100%' h='400'>
-        <HStack whiteSpace="nowrap" justifyContent='center' alignItems="center" bg="gray.200" w="100%" h="5%">
-          <HStack bgColor="white" align="center" justify="center" w="100%" h="100%">
-            <HStack ml='5%' alignItems="center" justify="start" w="20%">
-              <Text className=" font-bold" fontSize='50%'>Orden</Text>
-            </HStack>
-            <HStack spacing={12} alignItems="center" justify="center" w="40%">
-              <Text className=" font-bold" fontSize='50%'>Fecha</Text>
-              <Text className=" font-bold" fontSize='50%'>Hora</Text>
-            </HStack>
-            <HStack mr='3%' spacing={4} alignItems="center" justify="center" w="40%">
-              <Text className=" font-bold" fontSize='50%'>Estado</Text>
-            </HStack>
-          </HStack>
-        </HStack>
-        <Box bgColor="gray.200" overflowY='auto' w="100%" h="500">
-          <VStack overflow='auto'>
-
-            {filteredData.map((item) => (
-              <VStack w="100%" key={item.id}>
-                {item.estado === "APROBADO" && (
-                  <Button whiteSpace="nowrap" paddingRight={2} paddingLeft={2} justifyContent='center' alignItems="center" className="rounded-2xl" bg="gray.200" w="100%" h="50">
-                    <HStack className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
-                      <HStack ml="3%" alignItems="center" justify="start" w="20%">
-                        <Text className=" font-bold" fontSize='50%'>{item.orden}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text fontSize='50%' >{item.fecha}</Text>
-                        <Text fontSize='50%' >{item.hora}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text color="green" fontSize='50%'>{item.estado} </Text>
-                      </HStack>
-
-                    </HStack>
-                  </Button>
-                )}
-                {item.estado === "EN PROCESO" && (
-                  <Button whiteSpace="nowrap" paddingRight={2} paddingLeft={2} justifyContent='center' alignItems="center" className="rounded-2xl" bg="gray.200" w="100%" h="50">
-                    <HStack className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
-                      <HStack ml="3%" alignItems="center" justify="start" w="20%">
-                        <Text className=" font-bold" fontSize='50%'>{item.orden}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text fontSize='50%' >{item.fecha}</Text>
-                        <Text fontSize='50%' >{item.hora}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text color="yellow.500" fontSize='50%'>{item.estado} </Text>
-                      </HStack>
-
-                    </HStack>
-                  </Button>
-                )}
-                {item.estado === "RECHAZADO" && (
-
-                  <Button whiteSpace="nowrap" paddingRight={2} paddingLeft={2} justifyContent='center' alignItems="center" className="rounded-2xl" bg="gray.200" w="100%" h="50">
-                    <HStack className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
-                      <HStack ml="3%" alignItems="center" justify="start" w="20%">
-                        <Text className=" font-bold" fontSize='50%'>{item.orden}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text fontSize='50%' >{item.fecha}</Text>
-                        <Text fontSize='50%' >{item.hora}</Text>
-                      </HStack>
-                      <HStack spacing={4} alignItems="center" justify="center" w="40%">
-                        <Text color="red" fontSize='50%'>{item.estado} </Text>
-                      </HStack>
-
-                    </HStack>
-                  </Button>
-                )}
-              </VStack>
-            ))}
-            {isTable && (
-
-              <div className={`relative p-4 bg-gradient-to-tr from-gray-200 to-gray-300 border border-gray-300 text-center rounded-3xl shadow-md  flex flex-col`}>
-                <Flex
-                  width="100%"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  p={4}
-                  bg="gray.100"
-                  position="relative"
-                  className=" rounded-2xl"
-                >
-                  <Box position="absolute" left={4}>
-                    <Button onClick={() => setisTable(false)} colorScheme='teal' backgroundColor='#F1D803'>
-                      <ChevronLeftIcon w={5} h={5} color='black'></ChevronLeftIcon>
-                    </Button>
-                  </Box>
-                  <Box flex={1} textAlign="center">
-                    <Text fontSize="xl" fontWeight="bold">
-                      Asociar Factura
-                    </Text>
-                  </Box>
-                </Flex>
-                {isScreenLarge && (<HStack className="mt-3 mb-3" >
-                  <Input width='30%' border='1px' backgroundColor='white' placeholder="Posicion"></Input>
-                  <Button colorScheme='teal' backgroundColor='#F1D803'>
-                    <SearchIcon w={5} h={5} color='black'></SearchIcon>
-                  </Button>
-                </HStack>)}
-                {isScreenSmall && (<HStack className="mt-3 mb-3" >
-                  <Input width='60%' border='1px' backgroundColor='white' placeholder="Posicion"></Input>
-                  <Button colorScheme='teal' backgroundColor='#F1D803'>
-                    <SearchIcon w={5} h={5} color='black'></SearchIcon>
-                  </Button>
-                </HStack>)}
-                {/* Caja Interior */}
-                <Box overflow='auto'>
-                  <HotTable
-                    className="relative z-0"
-                    data={initialData}
-                    rowHeaders={false}
-                    width="100%"
-                    height="265"
-                    licenseKey="non-commercial-and-evaluation"
-                    columns={columns}
-                    stretchH="all"
-                  />
-                </Box>
-                <button
-                  style={{ backgroundColor: '#F1D803' }}
-                  className="mt-2 px-4 py-2 text-black rounded"
-                  onClick={() => setShowRightBox(true)}
-                >
-                  Asociar
-                </button>
-              </div>
-
-
-            )}
-
-
-
-          </VStack>
-        </Box>
-      </Box>
-
-
-
-
-    </>
-
-  );
-
-}

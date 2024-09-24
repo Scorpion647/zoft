@@ -1,8 +1,9 @@
 "use client";
 
+import { saveAppData } from "@/app/_lib/database/app_data";
 import MainButton from "@/app/_ui/component_items/MainButton";
 import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
-import { CreatelargeAdmin, CreateSmallAdmin } from "@/app/_ui/Createstate";
+import { CreatelargeAdmin } from "@/app/_ui/Createstate";
 import { CreateLargeUser, CreateSmallUser } from "@/app/_ui/CreateUser";
 import { handleExport } from "@/app/_ui/ExportButton";
 import { ImportDataBase } from "@/app/_ui/ImportDataBase";
@@ -14,8 +15,11 @@ import {
   AttachmentIcon,
   CalendarIcon,
   CheckCircleIcon,
+  DeleteIcon,
   DownloadIcon,
+  EditIcon,
   SearchIcon,
+  SmallCloseIcon,
 } from "@chakra-ui/icons";
 import {
   Box,
@@ -26,6 +30,7 @@ import {
   FormLabel,
   HStack,
   Icon,
+  Image,
   Input,
   Menu,
   MenuButton,
@@ -199,7 +204,8 @@ export default function Admin() {
     setInputValue(event.target.value);
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
+ 
     updateState("TRMNUM", inputValue);
     onCloseSecondModal();
   };
@@ -208,7 +214,34 @@ export default function Admin() {
     <ChakraProvider>
       <div className="w-full h-full flex justify-center items-center p-4 bg-gradient-to-tr from-green-900 to-green-700">
         <div
-          className={`relative flex w-full max-w-6xl  ${showRightBox && !isScreenSmall ? "md:justify-between" : "justify-center"}`}>
+          className={`relative flex w-full max-w-6xl  `}>
+            <Box position="relative">
+ 
+
+      {/* Contenido adicional de tu componente */}
+
+      <Box
+        position="fixed" // Fija la posición de la imagen
+        top="0px" // Ajusta la distancia desde el borde superior
+        left="5px" // Ajusta la distancia desde el borde izquierdo
+        zIndex="9999" // Asegúrate de que esté por encima de otros elementos
+      >
+        <HStack>
+        <Image
+          src="/grupo-ecopetrol.png" // Ruta a la imagen
+          alt="Descripción de la imagen"
+          w="160px"
+          h="70px"
+
+        />
+        <VStack spacing={0} align="start" justify="start" textAlign="start">
+        <Text className=" font-sans" textColor="white">REFINERIA</Text>
+        <Text className=" font-sans" textColor="white">DE CARTAGENA</Text>
+        </VStack>
+        </HStack>
+      </Box>
+    </Box>
+             
           {/* Caja Principal */}
           <div
             className={`relative p-4 bg-gradient-to-tr from-gray-200 to-gray-300 border border-gray-300 text-center rounded-3xl shadow-md  ${showRightBox ? "md:w-2/3" : "w-full"} flex flex-col`}>
@@ -221,38 +254,30 @@ export default function Admin() {
               className="rounded-2xl"
               position="relative">
               <Box position="absolute" right={4}>
+              
                 <Menu>
                   <MenuButton>
                     <Button colorScheme="teal" backgroundColor="#F1D803">
                       <Icon as={IoMenu} w={5} h={5} color="black" />
                     </Button>
-                  </MenuButton>
-                  <MenuList borderColor="gray.400" p="0">
-                    <MenuItem
-                      bgColor="gray.100"
-                      p="8px 16px"
-                      borderBottom="1px"
-                      className=" font-semibold "
-                      onClick={() => alert("Option 2")}>
-                      Colaboradores
-                    </MenuItem>
-                    <MenuItem
-                      bgColor="gray.100"
-                      p="8px 16px"
-                      borderBottom="1px"
-                      className=" font-semibold "
-                      onClick={onOpenSecondModal}>
-                      Actualizar TRM
-                    </MenuItem>
-                    <MenuItem
-                      bgColor="gray.100"
-                      p="8px 16px"
-                      color="red"
-                      className=" font-semibold "
-                      onClick={handleLogout}>
-                      Cerrar sesion
-                    </MenuItem>
-                  </MenuList>
+                    </MenuButton>
+                    <MenuList>
+                      <MenuItem icon={<AddIcon color="black" />}>
+                        Colaboradores
+                      </MenuItem>
+                      <MenuItem
+                        onClick={onOpenSecondModal}
+                        icon={<EditIcon color="black" />}>
+                        Actualizar TRM
+                      </MenuItem>
+                      <MenuItem
+                        onClick={handleLogout}
+                        icon={<SmallCloseIcon color="red.500" />}>
+                        Cerrar Sesíon
+                      </MenuItem>
+                    </MenuList>
+                  
+                  
                 </Menu>
               </Box>
               <Box flex={1} textAlign="center">
@@ -316,15 +341,7 @@ export default function Admin() {
                     isScreenSmall={isScreenSmall}
                     MenuL={MenuL}
                   />
-                  <MainButton
-                    onClick={() => screen(5)}
-                    text="Descargar CSV"
-                    icon={<DownloadIcon w={4} h={4} color="black" />}
-                    backgroundColor="gray.300"
-                    showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
-                    MenuL={MenuL}
-                  />
+                  
                 </VStack>
                 <VStack height="40%"></VStack>
                 {isScreenLarge && !MenuL && (
@@ -430,7 +447,7 @@ export default function Admin() {
                           updateSharedState={updateState}
                         />
                       )}
-                      {isScreenSmall && <CreateSmallAdmin />}
+                      
                     </>
                   )}
                 {!isRegistro &&
@@ -464,48 +481,11 @@ export default function Admin() {
                           <ImportDataBase />
                         </>
                       )}
-                      {isScreenSmall && (
-                        <Flex
-                          w="100%"
-                          className="mt-3 mb-3"
-                          justify="space-between"
-                          align="center">
-                          <HStack>
-                            <Input
-                              fontSize="60%"
-                              width="68%"
-                              border="1px"
-                              backgroundColor="white"
-                              placeholder="Dominio"
-                            />
-                            <Button
-                              width={6}
-                              colorScheme="teal"
-                              backgroundColor="#F1D803">
-                              <SearchIcon
-                                w={5}
-                                h={5}
-                                color="black"></SearchIcon>
-                            </Button>
-                          </HStack>
-                          <Button
-                            width={6}
-                            onClick={() => setAddDomain(true)}
-                            colorScheme="teal"
-                            backgroundColor="#F1D803">
-                            <AddIcon w={5} h={5} color="black"></AddIcon>
-                          </Button>
-                        </Flex>
-                      )}
+                      
                     </>
                   )}
-                {!isRegistro &&
-                  !isUsuario &&
-                  !isDominio &&
-                  !isDatos &&
-                  isTracking && (
-                    <Tracking_bd onButtonClick={handleButtonClick} />
-                  )}
+                
+                  
               </VStack>
             </HStack>
 
