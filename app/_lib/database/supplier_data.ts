@@ -26,11 +26,14 @@ export async function selectSingleSupplierData(
 
 export async function selectSupplierDataByInvoiceID(
   invoiceID: Tables<"invoice_data">["invoice_id"],
+  page: number = 1,
+  pageSize: number = 10,
 ) {
   const { data, error } = await supabase
     .from("supplier_data")
     .select()
-    .eq("invoice_id", invoiceID);
+    .eq("invoice_id", invoiceID)
+    .range((page - 1) * pageSize, page * pageSize - 1);
   if (error) throw error;
 
   return data;
