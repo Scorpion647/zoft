@@ -75,12 +75,10 @@ export async function insertMaterial(
 }
 
 export async function updateMaterial(
-  data: Arrayable<
-    Prettify<{
-      data: TablesUpdate<"materials">;
-      target: Tables<"materials">["material_code"];
-    }>
-  >,
+  data: Arrayable<{
+    data: Prettify<TablesUpdate<"materials">>;
+    target: Prettify<Tables<"materials">["material_code"]>;
+  }>,
 ) {
   const materialList = data instanceof Array ? data : [data];
 
