@@ -9,6 +9,8 @@ import 'handsontable/dist/handsontable.full.css';
 import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo } from '@/app/_lib/database/service';
 import debounce from "lodash/debounce"; 
 import { insertSupplierData } from "../_lib/database/supplier_data";
+import { getRole } from "../_lib/supabase/client";
+import {userData} from "@/app/_lib/database/currentUser"
 
 
 function formatMoney(amount) {
@@ -652,7 +654,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     const seenPositions = new Set();
     const duplicatePositions = new Map();
     const incompleteRows = [];
-    let id;
+    let id = 0;
     let hasCompleteRow = false;
   
     for (const [index, row] of tableData.entries()) {
@@ -683,7 +685,14 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           const newInvoice = await insertInvoice({ supplier_id: supplier_id, approved: false });
           id = newInvoice;
         }*/
-          if (id === undefined || id === null) {
+
+          const role = await getRole()
+          let supplier_employee = ""
+          if(role === "employee"){
+            const user = await userData()
+            supplier_employee = user.data.user.id 
+          }
+          if ((id === undefined || id === null || id === 0) && role === "administrator") {
             
             let newInvoice = supplier_id;
             id = newInvoice;
@@ -711,7 +720,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           duplicatePositions.get(record_position).push(index + 1);
         } else {
           seenPositions.add(record_position);
-  
+          
           const record = {
             base_bill_id: base_bill_id,
             bill_number: String(sharedState.nofactura),
@@ -722,7 +731,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             gross_weight: parseFloat(gross),
             packages: parseFloat(packag),
             conversion_value: Number(conver),
+            ...(role === "employee" ? { supplier_employee_id: supplier_employee } : {}),
           };
+          
   
           records.push(record);
   
@@ -756,7 +767,11 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     }
   
     try {
-      console.log(id)
+      if (id !== 0) {
+        await insertSupplierData(records, id);      
+      } else {
+        await insertSupplierData(records);       
+      }
       await insertSupplierData(records,id);
       alert('Registros enviados correctamente.');
       setisTable(false);

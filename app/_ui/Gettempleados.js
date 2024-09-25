@@ -18,10 +18,10 @@ export const Gettempleados = ({ supplier, regresar }) => {
         return array.filter(item => {
             const value = item[key];
             if (seen.has(value)) {
-                return false; // Ya existe, no incluir
+                return false; 
             } else {
-                seen.add(value); // Agregar a los valores vistos
-                return true; // Incluir
+                seen.add(value); 
+                return true; 
             }
         });
     }
@@ -44,7 +44,7 @@ export const Gettempleados = ({ supplier, regresar }) => {
                 );
 
                 setEmployees(removeDuplicates(Empleados, "email"));
-                setHasNextPage(true); // Asumimos que hay más empleados hasta que comprobemos la siguiente página
+                setHasNextPage(true); 
             } else {
                 setEmployees([]);
                 setHasNextPage(false);
@@ -70,7 +70,7 @@ export const Gettempleados = ({ supplier, regresar }) => {
         if (data && data.length > 0) {
             setCurrentPage(nextPage);
         } else {
-            setHasNextPage(false); // Si no hay datos en la siguiente página, no permitir avanzar
+            setHasNextPage(false); 
         }
     };
 
