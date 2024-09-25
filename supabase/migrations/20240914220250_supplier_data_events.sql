@@ -12,7 +12,7 @@ begin
             public.role_has_permission('supplier_data', permission_value)) then
         return true;
     end if;
-    if (can_touch_supplier_data.supplier_data_id is not null and
+    if (_supplier_data_id is not null and
         exists (select
                     1
                 from
@@ -23,7 +23,7 @@ begin
                   and employee.profile_id = auth.uid())) then
         return true;
     end if;
-    return false;
+    raise insufficient_privilege using message = 'You are not allowed to access or modify this supplier data';
 end
 $$ language plpgsql;
 
@@ -39,6 +39,10 @@ CREATE POLICY "can insert supplier data" ON public.supplier_data FOR insert
 WITH
   CHECK (
     EXISTS (
+      SELECT
+        public.role_has_permission ('supplier_data', B'0010')
+    )
+    OR EXISTS (
       SELECT
         1
       FROM
