@@ -34,11 +34,8 @@ CREATE POLICY "Delete for materials" ON public.materials FOR delete TO authentic
 CREATE FUNCTION public.before_materials_update () returns trigger AS $$
 begin
     -- if the user is not an administrator, then the subheading is the only field that can be updated
-    if (!public.user_is('administrator')) then
-        new.material_code := old.material_code;
-        new.created_at := old.created_at;
-        new.type := old.type;
-        new.measurement_unit := old.measurement_unit;
+    if (not public.user_is('administrator')) then
+        raise insufficient_privilege using message = 'You are not allowed to update materials';
     end if;
     return new;
 end;
