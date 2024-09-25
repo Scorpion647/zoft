@@ -4,6 +4,7 @@ import { Tables, TablesInsert, TablesUpdate } from "@lib/database.types";
 import { createClient } from "@lib/supabase/client";
 import { Arrayable, SetRequired, Writable } from "type-fest";
 import { MultiSelectQuery } from "../database.utils";
+import { Prettify } from "../utils/types";
 
 const supabase = createClient();
 
@@ -74,15 +75,20 @@ export async function insertMaterial(
 }
 
 export async function updateMaterial(
-  material: Arrayable<SetRequired<TablesUpdate<"materials">, "material_code">>,
+  data: Arrayable<
+    Prettify<{
+      data: TablesUpdate<"materials">;
+      target: Tables<"materials">["material_code"];
+    }>
+  >,
 ) {
-  const materialList = material instanceof Array ? material : [material];
+  const materialList = data instanceof Array ? data : [data];
 
   for (const it of materialList) {
     const { error } = await supabase
       .from("materials")
-      .update(it)
-      .eq("material_code", it.material_code)
+      .update(it.data)
+      .eq("material_code", it.target)
       .single();
 
     if (error) throw error;

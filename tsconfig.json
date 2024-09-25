@@ -19,7 +19,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@lib/*": ["./app/_lib/*"]
+      "@lib/*": ["./app/_lib/*"],
+      "@email-templates/*": ["./app/_ui/email-templates/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
