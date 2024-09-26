@@ -1,37 +1,22 @@
 ALTER TABLE public.supplier_data enable ROW level security;
 
 
-CREATE FUNCTION public.can_touch_supplier_data (
-  permission_value BIT DEFAULT B'0001',
-  supplier_data_id UUID DEFAULT NULL
-) returns BOOLEAN AS $$
-declare
-    _supplier_data_id alias for supplier_data_id;
-begin
-    if (select
-            public.role_has_permission('supplier_data', permission_value)) then
-        return true;
-    end if;
-    if (_supplier_data_id is not null and
-        exists (select
-                    1
-                from
-                    public.supplier_data data
-                        inner join public.supplier_employees employee using (supplier_employee_id)
-                where
-                      data.supplier_data_id = _supplier_data_id
-                  and employee.profile_id = auth.uid())) then
-        return true;
-    end if;
-    raise insufficient_privilege using message = 'You are not allowed to access or modify this supplier data';
-end
-$$ language plpgsql;
-
-
 CREATE POLICY "can select supplier data" ON public.supplier_data FOR
 SELECT
   USING (
-    can_touch_supplier_data (B'0001', supplier_data_id)
+    EXISTS (
+      SELECT
+        public.role_has_permission ('supplier_data', B'0001')
+    )
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees em
+      WHERE
+        em.supplier_employee_id = public.supplier_data.supplier_employee_id
+        AND em.profile_id = auth.uid ()
+    )
   );
 
 
@@ -46,13 +31,18 @@ WITH
       SELECT
         1
       FROM
-        public.supplier_employees employee
-        INNER JOIN public.suppliers supplier USING (supplier_id)
-        INNER JOIN public.base_bills bill USING (supplier_id)
+        public.supplier_employees em
       WHERE
-        employee.profile_id = auth.uid ()
-        AND employee.supplier_employee_id = supplier_data.supplier_employee_id
-        AND supplier_data.base_bill_id = bill.base_bill_id
+        em.supplier_employee_id = public.supplier_data.supplier_employee_id
+        AND em.profile_id = auth.uid ()
+        AND EXISTS (
+          SELECT
+            1
+          FROM
+            public.base_bills
+          WHERE
+            base_bills.supplier_id = em.supplier_id
+        )
     )
   );
 
@@ -60,12 +50,52 @@ WITH
 CREATE POLICY "can update supplier data" ON public.supplier_data
 FOR UPDATE
   USING (
-    can_touch_supplier_data (B'0100', supplier_data_id)
+    EXISTS (
+      SELECT
+        public.role_has_permission ('supplier_data', B'0100')
+    )
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees em
+      WHERE
+        em.supplier_employee_id = public.supplier_data.supplier_employee_id
+        AND em.profile_id = auth.uid ()
+        AND EXISTS (
+          SELECT
+            1
+          FROM
+            public.base_bills
+          WHERE
+            base_bills.supplier_id = em.supplier_id
+        )
+    )
   );
 
 
 CREATE POLICY "can delete supplier data" ON public.supplier_data FOR delete USING (
-  can_touch_supplier_data (B'1000', supplier_data_id)
+  EXISTS (
+    SELECT
+      public.role_has_permission ('supplier_data', B'1000')
+  )
+  OR EXISTS (
+    SELECT
+      1
+    FROM
+      public.supplier_employees em
+    WHERE
+      em.supplier_employee_id = public.supplier_data.supplier_employee_id
+      AND em.profile_id = auth.uid ()
+      AND EXISTS (
+        SELECT
+          1
+        FROM
+          public.base_bills
+        WHERE
+          base_bills.supplier_id = em.supplier_id
+      )
+  )
 );
 
 
@@ -98,14 +128,6 @@ EXECUTE procedure public.validate_supplier_data ();
 CREATE TRIGGER "before update supplier data" before
 UPDATE ON public.supplier_data FOR each ROW
 EXECUTE procedure public.validate_supplier_data ();
-
-
-CREATE FUNCTION public.supplier_data_after_insert () returns trigger AS $$
-begin
-    update public.base_bills set quantity = (quantity - new.billed_quantity) where base_bill_id = new.base_bill_id;
-    return new;
-end
-$$ language plpgsql security definer;
 
 
 CREATE TRIGGER "after insert supplier data"
