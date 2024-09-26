@@ -4,7 +4,7 @@ CREATE TYPE public.material_type AS ENUM('national', 'foreign', 'nationalized', 
 CREATE TABLE IF NOT EXISTS public.materials (
   material_code VARCHAR(255),
   subheading VARCHAR(10) CHECK (
-    LENGTH(subheading) = 10
+    subheading ~ '^(N-)?[a-zA-Z0-9]{10}$'
     OR subheading IS NULL
   ),
   type public.material_type,
