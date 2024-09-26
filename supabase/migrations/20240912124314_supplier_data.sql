@@ -6,6 +6,7 @@ CREATE TABLE public.supplier_data (
   billed_quantity INTEGER NOT NULL,
   billed_unit_price BIGINT NOT NULL,
   billed_total_price BIGINT NOT NULL,
+  billed_currency public.currency NOT NULL,
   gross_weight DECIMAL NOT NULL,
   packages DECIMAL NOT NULL,
   supplier_employee_id int4,
