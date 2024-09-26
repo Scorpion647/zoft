@@ -22,6 +22,19 @@ export async function selectSingleSupplierEmployee(
   return data;
 }
 
+export async function selecSupplierEmployeeByProfileId(
+  profile_id: Tables<"profiles">["profile_id"],
+) {
+  const { data, error } = await supabase
+    .from("supplier_employees")
+    .select()
+    .eq("profile_id", profile_id);
+
+  if (error) throw error;
+
+  return data;
+}
+
 export async function selectsupplier_employees(
   params: Prettify<
     Omit<MultiSelectQuery<Tables<"supplier_employees">>, "search">
