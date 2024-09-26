@@ -15,8 +15,12 @@ import { GridItem,Grid,Modal,
   FormLabel,
   useDisclosure,Tooltip,Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress, Spinner } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
-import {  insertSupplier,insertMaterial, insertRecord, getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord, updateRecord } from '@/app/_lib/database/service'; 
+import {  getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord, updateRecord } from '@/app/_lib/database/service'; 
 import { AddIcon, EditIcon } from '@chakra-ui/icons';
+import { insertBills } from '../_lib/database/base_bills';
+import { insertMaterial } from '../_lib/database/materials';
+import { insertSupplier } from '../_lib/database/suppliers';
+
 
 
 
@@ -125,7 +129,7 @@ export const ImportDataBase = () => {
     } else if (selectedTable === "Proveedores") {
       dataToSubmit = {
         name: formData.inputObligatorio,  // Nombre de Proveedor
-        domain: formData.inputOpcional || "",      // Dominio (opcional)
+        domain: formData.inputOpcional || "",      // Dominio 
       };
 
 
@@ -292,14 +296,13 @@ export const ImportDataBase = () => {
     let fileName = "";
 
     if(selectedTable === "Registros"){
-      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/w5c6av2x637mgo2uoaqg8/Plantilla-Records.XLSX?rlkey=v5v4vdfdclppqh7pv1bati8fj&st=8d4svjqp&dl=0"; // Cambia por la ruta de tu archivo
+      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/w5c6av2x637mgo2uoaqg8/Plantilla-Records.XLSX?rlkey=v5v4vdfdclppqh7pv1bati8fj&st=8d4svjqp&dl=0"; 
       fileName = "Plantilla Records.xlsx"; 
     }else if(selectedTable === "Proveedores"){
-      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/zlzt3l4jy43c28rqiqpkd/Plantilla-Proveedores.XLSX?rlkey=m6nty56oebtt5w8ps84gdyis0&st=bhnikt5v&dl=0"; // Cambia por la ruta de tu archivo
-      fileName = "Plantilla Proveedores.xlsx"; 
+      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/zlzt3l4jy43c28rqiqpkd/Plantilla-Proveedores.XLSX?rlkey=m6nty56oebtt5w8ps84gdyis0&st=bhnikt5v&dl=0"; 
       
     }else if(selectedTable === "Materiales"){
-      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/bfsa5jc7xtz6r3jclkqrv/Plantilla-Material.XLSX?rlkey=2d81cpqez3bszqxjubatk5q71&st=h2w75xnf&dl=0"; // Cambia por la ruta de tu archivo
+      fileUrl = "https://dl.dropboxusercontent.com/scl/fi/bfsa5jc7xtz6r3jclkqrv/Plantilla-Material.XLSX?rlkey=2d81cpqez3bszqxjubatk5q71&st=h2w75xnf&dl=0"; 
       fileName = "Plantilla Materiales.xlsx"; 
     }
  
@@ -356,20 +359,25 @@ export const ImportDataBase = () => {
 
   const validateAndInsertData = async () => {
     setIsProcessing(true);
-    const totalTasks = data.length; 
-  let completedTasks = 0; 
-  
+    setProgress(0)
+    let totalTasks = data.length; 
+    let completedTasks = 0; 
+    const updateThreshold = Math.ceil(totalTasks / 10); 
     let existingRecords = [];
     let existingMaterials = [];
     let existingSuppliers = [];
-  
+    
     try {
-      if (selectedTable === 'Registros') {
-        existingRecords = await getRecords(1, 30000);
-      } else if (selectedTable === 'Materiales') {
-        existingMaterials = await getMaterials(1, 40000);
-      } else if (selectedTable === 'Proveedores') {
-        existingSuppliers = await getSuppliers(1, 1000);
+      switch (selectedTable) {
+        case 'Registros':
+          existingRecords = await getRecords(1, 30000);
+          break;
+        case 'Materiales':
+          existingMaterials = await getMaterials(1, 40000);
+          break;
+        case 'Proveedores':
+          existingSuppliers = await getSuppliers(1, 1000);
+          break;
       }
     } catch (error) {
       console.error('Error fetching existing data:', error);
@@ -377,229 +385,176 @@ export const ImportDataBase = () => {
   
     const invalidMaterialEntries = [];
     const invalidSupplierEntries = [];
+    const recordsToInsert = [];
+    const materialsToInsert = [];
+    const suppliersToInsert = [];
+    
+    for (const row of data) {
+      const args = {};
   
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
+      if(selectedTable === "Registros") {
+
+          const [
+            purchase_order,
+            position,
+            material_code,
+            description,
+            quantity,
+            measurement_unit,
+            unit_price,
+            net_price,
+            supplier_name,
+            currency
+          ] = row;
   
-      if (selectedTable === 'Registros') {
-        const [
-          purchase_order,
-          position,
-          material_code,
-          description,
-          quantity,
-          measurement_unit,
-          unit_price,
-          net_price,
-          supplier_name,
-          currency
-        ] = row;
+          const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.item === position);
+          let supplierId;
   
-        const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.item === position);
-        let supplierExists = false;
-        let supplierId = 0;
+          if (!existingRecord) {
+            const domainExists = await getSupplier("", "", supplier_name);
+            if (domainExists.name !== supplier_name) {
+              const newSupplier = await insertSupplier({ name: supplier_name });
+              supplierId = newSupplier.supplier_id; 
+            } else {
+              supplierId = domainExists.supplier_id;
+            }
   
-        
-        if (!supplierExists) {
-
-              const domainExists = await getSupplier("","",supplier_name);
-              if (domainExists.name === supplier_name) {
-              supplierExists = true;
-
-              } else {
-                const newSupplier = await insertSupplier({ name: supplier_name });
-                  supplierExists = true;
-
-
+            const unitPriceParsed = parseFloat((parseFloat(unit_price).toFixed(2) * 100).toFixed(0));
+            console.log(
+              parseInt(position),
+              parseInt(String(quantity || 0).replace(/[.,]/g, '')), 
+              String(material_code),
+              String(purchase_order),
+              measurement_unit,
+              unitPriceParsed,
+              currency,
+              new Date().toISOString(),
+              supplierId,
+              description,
+              parseFloat((net_price * 100).toFixed(0)),
+            )
+            if (unitPriceParsed && !isNaN(unitPriceParsed)) {
+              recordsToInsert.push({
+                item: parseInt(position),
+                quantity: parseInt(String(quantity || 1).replace(/[.,]/g, '')), 
+                material_code: String(material_code),
+                purchase_order: String(purchase_order),
+                measurement_unit: measurement_unit,
+                unit_price: parseInt(unitPriceParsed) || 12345,
+                currency: String(currency),
+                created_at: new Date().toISOString(),
+                supplier_id: parseInt(supplierId) || 340,
+                description: String(description),
+                net_price: parseInt(parseFloat((net_price * 100).toFixed(0))) || 12345,
+              });
+            } else {
+              invalidMaterialEntries.push(row); 
+            }
           }
-          const verifi = await getSupplier("","",supplier_name);
-                  supplierId = verifi.supplier_id; 
-        }
-        const exist = await getRecord(purchase_order,position)
+          completedTasks += 1;
 
-        if (supplierExists && (exist.item === undefined || exist.item === NaN || exist.item !== Number || exist.item === "" || exist.item === null)) {
-          const args = {
-            item: parseInt(position),
-            quantity: parseInt((String(quantity)).replace(/[.,]/g, '')),
-            material_code: String(material_code),
-            purchase_order: String(purchase_order),
-            measurement_unit: measurement_unit,
-            unit_price: parseFloat((String((parseFloat(unit_price).toFixed(2) * 100).toFixed(0))).replace(/[.,]/g, '')),
-            currency: currency,
-            created_at: new Date().toISOString(),
-            supplier_id: supplierId,
-            description: description,
-            net_price: parseFloat((String(parseFloat(net_price * 100).toFixed(0))).replace(/[.,]/g, '')),
+
+        if (completedTasks % updateThreshold === 0 || completedTasks === totalTasks) {
+            const progress = (completedTasks / totalTasks) * 100; 
+            setProgress(progress); 
+        }
+        }else if(selectedTable === "Materiales"){
+  
+
+          const [material_code, subheading, type, measurement_unit] = row;
+          const materialArgs = { material_code };
+          
+          if (subheading){
+            if(String(subheading).length === 10){
+              materialArgs.subheading = String(subheading);
+            }else if(String(subheading).length > 10){
+              materialArgs.subheading = String(subheading).slice(0,10);
+            }
+          }
+   
+          const typeMapping = {
+            "national": "national",
+            "foreign": "foreign",
+            "nationalized": "nationalized",
+            "other": "other",
+            "NACIONAL": "national",
+            "EXTRANJERO": "foreign",
+            "NACIONALIZADO": "nationalized",
+            "OTRO": "other",
           };
           
-            const validar = await getRecord(Number(purchase_order),parseInt(position))
-            /*if(validar){
-              if(validar.currency !== currency ||validar.supplier_id !== supplierId || String(validar) !== String(description) || parseInt(validar.quantity) !== parseInt((String(quantity)).replace(/[.,]/g, '')) || String(validar.material_code) !== String(material_code) || validar.measurement_unit !== measurement_unit || parseFloat(validar.unit_price) !== parseFloat((String((parseFloat(unit_price).toFixed(2) * 100).toFixed(0))).replace(/[.,]/g, '')) || parseFloat(validar.net_price) !== parseFloat((String(parseFloat(net_price * 100).toFixed(0))).replace(/[.,]/g, '')))
-                {
-                  const update = await updateRecord(Number(purchase_order),parseInt(position),args)
-                  completedTasks += 1;
-                  const progress = (completedTasks / totalTasks) * 100;
-                  setProgress(progress);
-                  continue
-                }else{
-                  completedTasks += 1;
-                  const progress = (completedTasks / totalTasks) * 100;
-                  setProgress(progress);
-                  continue
-                }
-            }*/
-              try {
-              console.log(args.unit_price)
-              if(args.unit_price === NaN || Number(args.unit_price) === Number(0) || args.unit_price === undefined || args.unit_price === null || args.unit_price === "" || String(args.unit_price) === "null"){
-                console.log("aqui justo fallamos")
-                completedTasks += 1;
-              const progress = (completedTasks / totalTasks) * 100;
-              setProgress(progress);
-                continue;
-              }
-              const result = await insertRecord(args);
-              console.log('Record inserted successfully:');
-            } catch (error) {
-              console.error('Error processing data:', error.message);
-            
-              if (error.details) {
-                console.error('Error details:', error.details);
-              }
-            
-              console.error('Error stack trace:', error.stack);
-            }
-          
-        }
-      } else if (selectedTable === 'Materiales') {
-        const [material_code, subheading, type, measurement_unit] = row;
+          if (typeMapping[type]) {
+            materialArgs.type = typeMapping[type]
+          }
   
-        const existingMaterial = existingMaterials.find(material => material.material_code === material_code);
-        const args = { material_code, subheading };
-        if(type === "national" || type === "foreign" || type === "nationalized" || type === "other"){
-          args.type = type
-        }else if(type === "NACIONAL"){
-          args.type = "national"
-        }else if(type === "EXTRANJERO"){
-          args.type = "foreign"
-        }else if(type === "NACIONALIZADO"){
-          args.type = "nationalized"
-        }else if(type === "OTRO"){
-          args.type = "other"
-        }
-        if (measurement_unit !== "" ) args.measurement_unit = measurement_unit;
-        const revisar = await getMaterial(material_code)
-        if (revisar.material_code == material_code) { 
-          const safeTrim = (value) => typeof value === 'string' ? value.trim() : '';
+          if (measurement_unit)  materialArgs.measurement_unit = measurement_unit;
+  
+          const revisar = await getMaterial(material_code);
+          if (revisar.material_code === material_code) {
+            const updateNeeded = revisar.type !== materialArgs.type || revisar.measurement_unit !== materialArgs.measurement_unit;
+            if (updateNeeded) {
+              materialsToInsert.push(materialArgs);
+            }
+          } else {
+            materialsToInsert.push(materialArgs);
+          }
+          completedTasks += 1;
 
-          const revisarCode = safeTrim(revisar.material_code);
-          const revisarSubheading = safeTrim(revisar.subheading);
-          const revisarType = safeTrim(revisar.type);
-          const revisarMeasurementUnit = safeTrim(revisar.measurement_unit);
-          
-          const codeTrimmed = safeTrim(material_code);
-          const subheadingTrimmed = safeTrim(subheading);
-          const typeTrimmed = safeTrim(type);
-          const measurementUnitTrimmed = safeTrim(measurement_unit);
-          
-          
-          if(revisarType !== typeTrimmed || revisarMeasurementUnit !== measurementUnitTrimmed){
-            try {
-              const update = await updateMaterial(material_code, args);
-              if (update instanceof Error) {
-                console.error('Error updating material:', update);
-              } else {
-                console.log('Material updated successfully:', update);
-              }
-            } catch (error) {
-              console.error('Error updating material:', error);
-            }
-          }else{
-            console.log("todo esta bien por aqui")
-          }
-        } else {
-          
-          try {
-            const result = await insertMaterial(args);
-            if (result instanceof Error) {
-              console.error('Error inserting material:', result);
-            } else {
-              console.log('Material inserted successfully:', result);
-            }
-          } catch (error) {
-            console.error('Error inserting material:', error);
-          }
+
+        if (completedTasks % updateThreshold === 0 || completedTasks === totalTasks) {
+            const progress = (completedTasks / totalTasks) * 100; 
+            setProgress(progress); 
         }
-      } else if (selectedTable === 'Proveedores') {
-        const [domain, name] = row;
-        const existingSupplier = existingSuppliers.find(supplier => supplier.domain === domain);
-  
-        const args = { domain, name };
-  
-        if (existingSupplier) {
-          console.log('Updating supplier:', args);
-        } else {
-          try {
-            const result = await insertSupplier(args);
-            if (result instanceof Error) {
-              console.error('Error inserting supplier:', result);
-            } else {
-              console.log('Supplier inserted successfully:', result);
-            }
-          } catch (error) {
-            console.error('Error inserting supplier:', error);
-          }
+        }else if(selectedTable === "Proveedores"){
+
+          const [domain, name] = row;
+          suppliersToInsert.push({ domain, name });
+          completedTasks += 1;
+
+        
+        if (completedTasks % updateThreshold === 0 || completedTasks === totalTasks) {
+            const progress = (completedTasks / totalTasks) * 100; 
+            setProgress(progress); 
         }
       }
-      completedTasks += 1;
-      const progress = (completedTasks / totalTasks) * 100;
-      setProgress(progress);
+    }
+  
 
-      
-      
+    await Promise.all([
+      insertBills(recordsToInsert),
+      insertMaterial(materialsToInsert),
+      insertSupplier(suppliersToInsert),
+    ]);
+  
+
+    if (invalidMaterialEntries.length > 0) {
+      const groupedErrors = groupConsecutiveNumbers(invalidMaterialEntries);
+      const errorMessage = `Material code not found at rows ${groupedErrors.join(', ')}`;
+      toast({ title: 'Validation Errors', description: errorMessage, status: 'error', position: 'top', isClosable: true, duration: 10000 });
     }
   
-    if (invalidMaterialEntries.length > 0 || invalidSupplierEntries.length > 0) {
-      const groupConsecutiveNumbers = (arr) => {
-        const grouped = [];
-        let temp = [arr[0]];
-  
-        for (let i = 1; i < arr.length; i++) {
-          if (arr[i] === arr[i - 1] + 1) {
-            temp.push(arr[i]);
-          } else {
-            grouped.push(temp);
-            temp = [arr[i]];
-          }
-        }
-        grouped.push(temp);
-  
-        return grouped.map(group => (group.length > 1 ? `${group[0]}-${group[group.length - 1]}` : `${group[0]}`));
-      };
-  
-      const materialErrors = invalidMaterialEntries.length > 0 ? `Material code not found at rows ${groupConsecutiveNumbers(invalidMaterialEntries).join(', ')}` : '';
-      const supplierErrors = invalidSupplierEntries.length > 0 ? `Supplier not found at rows ${groupConsecutiveNumbers(invalidSupplierEntries).join(', ')}` : '';
-      const errorMessage = [materialErrors, supplierErrors].filter(msg => msg).join('\n');
-  
-      toast({
-        title: 'Validation Errors',
-        description: errorMessage,
-        status: 'error',
-        position: 'top',
-        isClosable: true,
-        duration: 10000,
-      });
-    }
-    
     setIsProcessing(false);
-    setProgress(100);
-    toast({
-      title: "Formulario enviado",
-          description: ` ${selectedTable} se han enviado correctamente.`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+    toast({ title: "Formulario enviado", description: `El formulario del ${selectedTable} se ha enviado correctamente.`, status: "success", duration: 3000, isClosable: true });
   };
+  
+
+  const groupConsecutiveNumbers = (arr) => {
+    const grouped = [];
+    let temp = [arr[0]];
+  
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i] === arr[i - 1] + 1) {
+        temp.push(arr[i]);
+      } else {
+        grouped.push(temp);
+        temp = [arr[i]];
+      }
+    }
+    grouped.push(temp);
+  
+    return grouped.map(group => (group.length > 1 ? `${group[0]}-${group[group.length - 1]}` : `${group[0]}`));
+  };
+  
 
 const getsuplier = async (record) => {
   const supplier = await getSupplier(record)
