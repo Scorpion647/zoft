@@ -130,11 +130,6 @@ UPDATE ON public.supplier_data FOR each ROW
 EXECUTE procedure public.validate_supplier_data ();
 
 
-CREATE TRIGGER "after insert supplier data"
-AFTER insert ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_insert ();
-
-
 CREATE FUNCTION public.supplier_data_after_update () returns trigger AS $$
 begin
     if (old.billed_quantity <> new.billed_quantity) then
