@@ -12,6 +12,7 @@ import { insertSupplierData, selectSingleSupplierData, selectSupplierData } from
 import { getRole } from "../_lib/supabase/client";
 import {userData} from "@/app/_lib/database/currentUser"
 import { selectSingleSupplier } from "../_lib/database/suppliers";
+import { selectSingleSupplierEmployee } from "../_lib/database/supplier_employee";
 
 
 
@@ -693,10 +694,11 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
           const role = await getRole()
           
-          if(role === "employee"){
+          if(role === "employee" && email === ""){
             const user = await userData()
             console.log(user)
-            supplier_employee = 1
+            const suid = await selectSingleSupplierEmployee(user.data.user.id)
+            supplier_employee = suid.supplier_employee_id
             email = user.data.user.email
             const sup = await selectSingleSupplier(supplier_id)
             suname = sup.name
@@ -706,8 +708,6 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             let newInvoice = supplier_id;
             id = newInvoice;
             console.log(id)
-          }else if(role === "employee"){
-            
           }
         if (subheading !== "**********") {
           const valida = await getMaterial(material_code);
