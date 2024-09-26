@@ -805,27 +805,27 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   };
 
   function transformDateTime(inputDate) {
-    // Crear un nuevo objeto Date usando la cadena de fecha
+
     const date = new Date(inputDate);
   
-    // Obtener el año, mes y día
+
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Los meses en JS empiezan desde 0, así que sumamos 1
+    const month = String(date.getMonth() + 1).padStart(2, '0'); 
     const day = String(date.getDate()).padStart(2, '0');
   
-    // Obtener la hora y definir AM o PM
+
     let hours = date.getHours();
     const minutes = date.getMinutes();
     const ampm = hours >= 12 ? 'PM' : 'AM';
     
-    // Convertir la hora al formato de 12 horas
+
     hours = hours % 12;
-    hours = hours ? hours : 12; // El "0" se convierte a "12" en formato de 12 horas
+    hours = hours ? hours : 12; 
   
-    // Formatear los minutos (con ceros a la izquierda si es necesario)
+
     const formattedMinutes = minutes < 10 ? '00' : minutes;
   
-    // Construir la fecha formateada
+
     const formattedDate = `${year}-${month}-${day} ${hours}:${formattedMinutes} ${ampm}`;
   
     return formattedDate;
@@ -844,7 +844,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     };
   
     try {
-      const response = await fetch('/api/mail/new-supplier-data', {  // Ruta donde tengas el endpoint en tu Next.js
+      const response = await fetch('/api/mail/new-supplier-data', {  
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
