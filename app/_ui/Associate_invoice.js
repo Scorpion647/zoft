@@ -8,9 +8,11 @@ import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
 import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo } from '@/app/_lib/database/service';
 import debounce from "lodash/debounce"; 
-import { insertSupplierData } from "../_lib/database/supplier_data";
+import { insertSupplierData, selectSingleSupplierData, selectSupplierData } from "../_lib/database/supplier_data";
 import { getRole } from "../_lib/supabase/client";
 import {userData} from "@/app/_lib/database/currentUser"
+import { selectSingleSupplier } from "../_lib/database/suppliers";
+
 
 
 function formatMoney(amount) {
@@ -655,6 +657,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     const duplicatePositions = new Map();
     const incompleteRows = [];
     let id = 0;
+    let supplier_employee = ""
+    let suname = "";
+    let email = "";
     let hasCompleteRow = false;
   
     for (const [index, row] of tableData.entries()) {
@@ -687,21 +692,27 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
         }*/
 
           const role = await getRole()
-          let supplier_employee = ""
+          
           if(role === "employee"){
             const user = await userData()
-            supplier_employee = user.data.user.id 
+            console.log(user)
+            supplier_employee = 1
+            email = user.data.user.email
+            const sup = await selectSingleSupplier(supplier_id)
+            suname = sup.name
           }
           if ((id === undefined || id === null || id === 0) && role === "administrator") {
             
             let newInvoice = supplier_id;
             id = newInvoice;
             console.log(id)
+          }else if(role === "employee"){
+            
           }
         if (subheading !== "**********") {
           const valida = await getMaterial(material_code);
           if (valida.material_code) {
-            await updateMaterial(material_code, { subheading: subheading });
+            await updateMaterial({material_code: material_code, subheading: subheading });
           } else {
             await insertMaterial({ material_code: material_code, subheading: subheading });
           }
@@ -720,7 +731,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           duplicatePositions.get(record_position).push(index + 1);
         } else {
           seenPositions.add(record_position);
-          
+          if(role === "employee") console.log(supplier_employee)
           const record = {
             base_bill_id: base_bill_id,
             bill_number: String(sharedState.nofactura),
@@ -767,10 +778,15 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     }
   
     try {
+      console.log("Este es el Id:", id)
+      console.log(records)
       if (id !== 0) {
-        await insertSupplierData(records, id);      
+        await insertSupplierData(records, id);   
       } else {
-        await insertSupplierData(records);       
+        await insertSupplierData(records);     
+        const date = transformDateTime(new Date())
+        const info = await selectSupplierData({page: 1, limit: 1, search: sharedState.nofactura})
+        await sendEmail(email,orderNumber,sharedState.nofactura,date,suname,info[0].invoice_id)     
       }
       await insertSupplierData(records,id);
       alert('Registros enviados correctamente.');
@@ -787,8 +803,65 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     }
     
   };
+
+  function transformDateTime(inputDate) {
+    // Crear un nuevo objeto Date usando la cadena de fecha
+    const date = new Date(inputDate);
+  
+    // Obtener el año, mes y día
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Los meses en JS empiezan desde 0, así que sumamos 1
+    const day = String(date.getDate()).padStart(2, '0');
+  
+    // Obtener la hora y definir AM o PM
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convertir la hora al formato de 12 horas
+    hours = hours % 12;
+    hours = hours ? hours : 12; // El "0" se convierte a "12" en formato de 12 horas
+  
+    // Formatear los minutos (con ceros a la izquierda si es necesario)
+    const formattedMinutes = minutes < 10 ? '00' : minutes;
+  
+    // Construir la fecha formateada
+    const formattedDate = `${year}-${month}-${day} ${hours}:${formattedMinutes} ${ampm}`;
+  
+    return formattedDate;
+  }
   
 
+
+  const sendEmail = async (email,purchase,bill,date,name,invoice) => {
+    const dataToSend = {
+      email: email,
+      purchase_order: purchase,
+      bill: bill,
+      date: date,
+      supplier_name: name,
+      invoice_id: invoice,
+    };
+  
+    try {
+      const response = await fetch('/api/mail/new-supplier-data', {  // Ruta donde tengas el endpoint en tu Next.js
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to send email');
+      }
+  
+      const result = await response.json();
+      console.log('Email sent successfully:', result);
+    } catch (error) {
+      console.error('Error sending email:', error);
+    }
+  };
 
 
   const [subheadingValidity, setSubheadingValidity] = useState(new Map());
