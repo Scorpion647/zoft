@@ -15,7 +15,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
     <h1>Tu solicitud ha sido recibida para revisión</h1>
     <ul>
       <li>
-        <b>Tipo de solicitud:</b> <span>Facturación</span>
+        <b>Tipo de solicitud:</b> <span>Ingreso</span>
       </li>
       <li>
         <b>Número de solicitud:</b> <span>{params.invoice_id}</span>
