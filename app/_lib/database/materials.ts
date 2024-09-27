@@ -22,6 +22,19 @@ export async function selectSingleMaterial(
   return data;
 }
 
+export async function selectBySubheading(subheading: string) {
+  const { data, error } = await supabase
+    .from("materials")
+    .select("*")
+    .eq("subheading", subheading);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 export async function selectMaterials(
   params: MultiSelectQuery<Tables<"materials">>,
 ) {
