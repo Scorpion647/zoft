@@ -14,7 +14,6 @@ CREATE TABLE public.supplier_data (
   invoice_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   modified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  conversion_value DECIMAL NOT NULL,
   PRIMARY KEY (supplier_data_id),
   FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON DELETE cascade ON UPDATE cascade,
   FOREIGN key (base_bill_id) REFERENCES public.base_bills (base_bill_id) ON DELETE cascade ON UPDATE cascade,
@@ -36,8 +35,7 @@ CREATE FUNCTION supplier_data_search (public.supplier_data) returns TEXT AS $$
              || $1.created_by || ' '
              || $1.invoice_id || ' '
              || $1.created_at || ' '
-             || $1.modified_at || ' '
-             || $1.conversion_value;
+             || $1.modified_at
 $$ language sql immutable;
 
 
