@@ -1,10 +1,12 @@
---TODO: Remove Approved and add an enum to contain the states
+CREATE TYPE public.invoice_state AS ENUM('pending', 'approved', 'rejected');
+
+
 CREATE TABLE public.invoice_data (
   invoice_id UUID DEFAULT gen_random_uuid () NOT NULL,
   supplier_id int4 NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  approved BOOLEAN DEFAULT FALSE NOT NULL,
+  state public.invoice_state DEFAULT 'pending' NOT NULL,
   last_modified_by UUID DEFAULT auth.uid (),
   PRIMARY KEY (invoice_id),
   FOREIGN key (supplier_id) REFERENCES public.suppliers (supplier_id) ON DELETE cascade ON UPDATE cascade,
