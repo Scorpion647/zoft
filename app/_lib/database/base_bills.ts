@@ -66,6 +66,19 @@ export async function selectSingleBill(
   return data;
 }
 
+export async function selectByPurchaseOrder(
+  po: Tables<"base_bills">["purchase_order"],
+  item: Tables<"base_bills">["item"],
+) {
+  const { data, error } = await supabase
+    .from("base_bills")
+    .select()
+    .eq("purchase_order", po)
+    .eq("item", item);
+  if (error) throw error;
+  return data;
+}
+
 export async function selectBills(
   params: MultiSelectQuery<Tables<"base_bills">>,
 ) {
