@@ -33,6 +33,15 @@ CREATE POLICY "insert for invoice data" ON public.invoice_data FOR insert
 WITH
   CHECK (
     public.role_has_permission ('invoice_data', B'0010')
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees
+      WHERE
+        supplier_id = public.invoice_data.supplier_id
+        AND profile_id = auth.uid ()
+    )
   );
 
 
@@ -40,9 +49,27 @@ CREATE POLICY "update for invoice data" ON public.invoice_data
 FOR UPDATE
   USING (
     public.role_has_permission ('invoice_data', B'0100')
+    OR EXISTS (
+      SELECT
+        1
+      FROM
+        public.supplier_employees
+      WHERE
+        supplier_id = public.invoice_data.supplier_id
+        AND profile_id = auth.uid ()
+    )
   );
 
 
 CREATE POLICY "delete for invoice data" ON public.invoice_data FOR delete USING (
   public.role_has_permission ('invoice_data', B'1000')
+  OR EXISTS (
+    SELECT
+      1
+    FROM
+      public.supplier_employees
+    WHERE
+      supplier_id = public.invoice_data.supplier_id
+      AND profile_id = auth.uid ()
+  )
 );
