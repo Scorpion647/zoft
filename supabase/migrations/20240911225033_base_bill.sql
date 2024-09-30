@@ -44,13 +44,15 @@ VALUES
 CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
 
 
-CREATE DOMAIN positive_integer AS INTEGER CHECK (value > 0);
+CREATE DOMAIN positive_integer AS INTEGER CHECK (value >= 0);
 
 
 CREATE TABLE public.base_bills (
   base_bill_id UUID DEFAULT gen_random_uuid () NOT NULL,
   item positive_integer NOT NULL,
-  quantity positive_integer NOT NULL DEFAULT 0,
+  approved_quantity positive_integer NOT NULL DEFAULT 0,
+  pending_quantity positive_integer NOT NULL DEFAULT 0,
+  total_quantity positive_integer NOT NULL DEFAULT 0,
   material_code VARCHAR(50) NOT NULL,
   purchase_order VARCHAR(50) NOT NULL,
   measurement_unit VARCHAR(50) NOT NULL,
@@ -69,14 +71,11 @@ CREATE TABLE public.base_bills (
 CREATE FUNCTION base_bill_search (public.base_bills) returns TEXT AS $$
   select $1.base_bill_id || ' '
              || $1.item || ' '
-             || $1.quantity || ' '
              || $1.material_code || ' '
              || $1.purchase_order || ' '
              || $1.measurement_unit || ' '
-             || $1.unit_price || ' '
              || $1.currency || ' '
              || $1.description || ' '
-             || $1.net_price || ' '
              || $1.created_at;
 $$ language sql immutable;
 

@@ -99,7 +99,8 @@ CREATE POLICY "can delete supplier data" ON public.supplier_data FOR delete USIN
 );
 
 
-CREATE FUNCTION public.validate_supplier_data () returns trigger AS $$
+CREATE
+OR REPLACE function public.validate_supplier_data () returns trigger AS $$
 declare
     _base_bill public.base_bills%rowtype;
 begin
@@ -110,9 +111,9 @@ begin
                 'You are not allowed to add or modify supplier data for this base bill';
     end if;
 
-    if (_base_bill.quantity - new.billed_quantity < 0) then
+    if (new.billed_quantity+_base_bill.approved_quantity) > _base_bill.total_quantity then
         raise data_exception using message =
-                'You cannot bill more than the quantity available. Current quantity: ' || _base_bill.quantity::text ||
+                'You cannot bill more than the quantity available. Current available quantity in bill '||_base_bill.purchase_order ||': ' || (_base_bill.total_quantity-_base_bill.approved_quantity)::text ||
                 ' Billed quantity: ' || new.billed_quantity::text;
     end if;
 
@@ -128,35 +129,3 @@ EXECUTE procedure public.validate_supplier_data ();
 CREATE TRIGGER "before update supplier data" before
 UPDATE ON public.supplier_data FOR each ROW
 EXECUTE procedure public.validate_supplier_data ();
-
-
-CREATE FUNCTION public.supplier_data_after_update () returns trigger AS $$
-begin
-    if (old.billed_quantity <> new.billed_quantity) then
-        update public.base_bills
-        set
-            quantity = (quantity + old.billed_quantity - new.billed_quantity)
-        where
-            base_bill_id = new.base_bill_id;
-    end if;
-    return new;
-end
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER "after update supplier data"
-AFTER
-UPDATE ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_update ();
-
-
-CREATE FUNCTION public.supplier_data_after_delete () returns trigger AS $$
-begin
-    update public.base_bills set quantity = (quantity + old.billed_quantity) where base_bill_id = old.base_bill_id;
-end
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER "after delete supplier data"
-AFTER delete ON public.supplier_data FOR each ROW
-EXECUTE procedure public.supplier_data_after_delete ();

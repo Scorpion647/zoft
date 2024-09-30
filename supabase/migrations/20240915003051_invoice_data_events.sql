@@ -46,17 +46,3 @@ FOR UPDATE
 CREATE POLICY "delete for invoice data" ON public.invoice_data FOR delete USING (
   public.role_has_permission ('invoice_data', B'1000')
 );
-
-
-CREATE FUNCTION public.after_invoice_data_update () returns trigger AS $$
-begin
-    new.updated_at := now();
-    return new;
-end;
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER after_update_invoice_data
-AFTER
-UPDATE ON public.invoice_data FOR each ROW
-EXECUTE procedure public.after_invoice_data_update ();

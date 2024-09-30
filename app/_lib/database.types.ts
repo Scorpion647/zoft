@@ -58,6 +58,7 @@ export type Database = {
       base_bills: {
         Row: {
           base_bill_id: string;
+          computed_quantity: number;
           created_at: string;
           currency: Database["public"]["Enums"]["currency"];
           description: string | null;
@@ -66,13 +67,15 @@ export type Database = {
           measurement_unit: string;
           net_price: number | null;
           purchase_order: string;
-          quantity: number;
+          real_quantity: number;
           supplier_id: number;
+          total_quantity: number;
           unit_price: number;
           base_bill_search: string | null;
         };
         Insert: {
           base_bill_id?: string;
+          computed_quantity?: number;
           created_at?: string;
           currency: Database["public"]["Enums"]["currency"];
           description?: string | null;
@@ -81,12 +84,14 @@ export type Database = {
           measurement_unit: string;
           net_price?: number | null;
           purchase_order: string;
-          quantity?: number;
+          real_quantity?: number;
           supplier_id: number;
+          total_quantity?: number;
           unit_price: number;
         };
         Update: {
           base_bill_id?: string;
+          computed_quantity?: number;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency"];
           description?: string | null;
@@ -95,8 +100,9 @@ export type Database = {
           measurement_unit?: string;
           net_price?: number | null;
           purchase_order?: string;
-          quantity?: number;
+          real_quantity?: number;
           supplier_id?: number;
+          total_quantity?: number;
           unit_price?: number;
         };
         Relationships: [
@@ -111,26 +117,26 @@ export type Database = {
       };
       invoice_data: {
         Row: {
-          approved: boolean;
           created_at: string;
           invoice_id: string;
           last_modified_by: string | null;
+          state: Database["public"]["Enums"]["invoice_state"];
           supplier_id: number;
           updated_at: string;
         };
         Insert: {
-          approved?: boolean;
           created_at?: string;
           invoice_id?: string;
           last_modified_by?: string | null;
+          state?: Database["public"]["Enums"]["invoice_state"];
           supplier_id: number;
           updated_at?: string;
         };
         Update: {
-          approved?: boolean;
           created_at?: string;
           invoice_id?: string;
           last_modified_by?: string | null;
+          state?: Database["public"]["Enums"]["invoice_state"];
           supplier_id?: number;
           updated_at?: string;
         };
@@ -215,10 +221,10 @@ export type Database = {
         Row: {
           base_bill_id: string;
           bill_number: string;
+          billed_currency: Database["public"]["Enums"]["currency"];
           billed_quantity: number;
           billed_total_price: number;
           billed_unit_price: number;
-          conversion_value: number;
           created_at: string;
           created_by: string | null;
           gross_weight: number;
@@ -233,10 +239,10 @@ export type Database = {
         Insert: {
           base_bill_id: string;
           bill_number: string;
+          billed_currency: Database["public"]["Enums"]["currency"];
           billed_quantity: number;
           billed_total_price: number;
           billed_unit_price: number;
-          conversion_value: number;
           created_at?: string;
           created_by?: string | null;
           gross_weight: number;
@@ -250,10 +256,10 @@ export type Database = {
         Update: {
           base_bill_id?: string;
           bill_number?: string;
+          billed_currency?: Database["public"]["Enums"]["currency"];
           billed_quantity?: number;
           billed_total_price?: number;
           billed_unit_price?: number;
-          conversion_value?: number;
           created_at?: string;
           created_by?: string | null;
           gross_weight?: number;
@@ -364,13 +370,6 @@ export type Database = {
         };
         Returns: string;
       };
-      can_touch_supplier_data: {
-        Args: {
-          permission_value?: unknown;
-          supplier_data_id?: string;
-        };
-        Returns: boolean;
-      };
       material_search: {
         Args: {
           "": unknown;
@@ -408,6 +407,7 @@ export type Database = {
     Enums: {
       app_options: "trm_usd" | "trm_eur";
       currency: "COP" | "USD" | "EUR";
+      invoice_state: "pending" | "approved" | "rejected";
       material_type: "national" | "foreign" | "nationalized" | "other";
     };
     CompositeTypes: {

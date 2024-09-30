@@ -35,3 +35,19 @@ FOR UPDATE
 CREATE POLICY "delete for base bills" ON public.base_bills FOR delete TO authenticated USING (
   public.role_has_permission ('base_bills', B'1000')
 );
+
+
+CREATE
+OR REPLACE function public.before_base_bill_update () returns trigger AS $$
+begin
+  if new.approved_quantity > new.total_quantity  then
+      raise invalid_parameter_value using message='The given quantity exceeds the real quantity. You should increase the total quantity available or decrease the given quantity';
+  end if;
+  return new;
+end
+$$ language plpgsql security definer;
+
+
+CREATE TRIGGER before_update_base_bill before
+UPDATE ON public.base_bills FOR each ROW
+EXECUTE procedure public.before_base_bill_update ();

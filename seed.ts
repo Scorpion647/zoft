@@ -10,9 +10,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const profilesN = 10;
 const suppliersN = 10;
 const materialsN = 100;
-const base_billsN = 50;
-const invoice_dataN = 5;
-const supplier_dataN = 200;
+const base_billsN = 1;
+const invoice_dataN = 1;
+const supplier_dataN = 2;
 
 const main = async () => {
   const seed = await createSeedClient();
@@ -88,7 +88,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     (x) =>
       x(base_billsN, ({ seed }) => ({
         item: copycat.int(seed, { min: 0, max: 1000 }),
-        quantity: copycat.int(seed, { min: 0, max: 5000 }),
+        total_quantity: copycat.int(seed, { min: 0, max: 5000 }),
         unit_price: copycat.int(seed, { min: 0, max: Infinity }),
       })),
     { connect: { suppliers } },
@@ -108,7 +108,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
         gross_weight: copycat.float(seed, { min: 0, max: 10000 }),
         packages: copycat.float(seed, { min: 0, max: 10000 }),
       })),
-    { connect: { supplier_employees, base_bills, profiles, invoice_data } },
+    { connect: { invoice_data, supplier_employees, base_bills, profiles } },
   );
 
   console.log("Database seeded successfully!");
