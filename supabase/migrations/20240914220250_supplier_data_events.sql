@@ -103,17 +103,28 @@ CREATE
 OR REPLACE function public.validate_supplier_data () returns trigger AS $$
 declare
     _base_bill public.base_bills%rowtype;
+    _invoice public.invoice_data%rowtype;
+    _available_quantity numeric;
 begin
     select * into _base_bill from public.base_bills where base_bill_id = new.base_bill_id;
+    select * into _invoice from public.invoice_data where invoice_id = new.invoice_id;
 
     if _base_bill is null then
         raise insufficient_privilege using message =
                 'You are not allowed to add or modify supplier data for this base bill';
     end if;
 
-    if (new.billed_quantity+_base_bill.approved_quantity) > _base_bill.total_quantity then
+    _available_quantity := _base_bill.total_quantity;
+
+    if (_invoice.state='pending') then
+        _available_quantity := _available_quantity - (_base_bill.pending_quantity - old.billed_quantity);
+    elseif (_invoice.state='approved') then
+        _available_quantity := _available_quantity - (_base_bill.approved_quantity - old.billed_quantity);
+    end if;
+
+    if (new.billed_quantity > _available_quantity or new.billed_quantity < 0) then
         raise data_exception using message =
-                'You cannot bill more than the quantity available. Current available quantity in bill '||_base_bill.purchase_order ||': ' || (_base_bill.total_quantity-_base_bill.approved_quantity)::text ||
+                'You cannot bill more than the quantity available. Current available quantity in bill '||_base_bill.purchase_order ||': ' || (_base_bill.total_quantity-(_base_bill.approved_quantity+_base_bill.pending_quantity))::text ||
                 ' Billed quantity: ' || new.billed_quantity::text;
     end if;
 
