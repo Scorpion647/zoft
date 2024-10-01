@@ -26,16 +26,15 @@ const main = async () => {
   );
 
   for (let i = 0; i < profilesN; i++) {
-    await supabase.auth
-      .signUp({
-        email: `user-${copycat.int(i, { min: 0, max: profilesN })}@email.com`,
-        password: "Password123!",
-        phone: copycat.phoneNumber(i),
-      })
-      .then((result) => {
-        console.info(`User ${i} signed up`);
-      });
+    await supabase.auth.signUp({
+      email: `user-${copycat.int(i, { min: 0, max: profilesN })}@email.com`,
+      password: "Password123!",
+      phone: copycat.phoneNumber(i),
+    });
   }
+  await supabase.auth.signOut();
+
+  console.log(`--> ${profilesN} Users registered\n`);
 
   await feed(seed, supabase);
 
@@ -45,7 +44,7 @@ const main = async () => {
 main();
 
 const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
-  const { data: profilesData } = await supabase.from("profiles").select();
+  const { data: profilesData } = await supabase.from("profiles").select("*");
   const profiles: profilesScalars[] =
     profilesData?.map((profile) => profile) ?? [];
 
@@ -55,12 +54,16 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     })),
   );
 
+  console.log(`--> ${suppliers.length} Suppliers inserted\n`);
+
   const { supplier_employees } = await seed.supplier_employees(
     (x) => x(profilesN),
     {
-      connect: { profiles, suppliers },
+      connect: { suppliers, profiles },
     },
   );
+
+  console.log(`--> ${supplier_employees.length} Supplier employees inserted\n`);
 
   const subheadings: Array<string> = [];
   for (let i = 0; i < materialsN; i++) {
@@ -84,6 +87,8 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     })),
   );
 
+  console.log(`--> ${materials.length} Materials inserted \n`);
+
   const { base_bills } = await seed.base_bills(
     (x) =>
       x(base_billsN, ({ seed }) => ({
@@ -94,9 +99,13 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     { connect: { suppliers } },
   );
 
+  console.log(`--> ${base_bills.length} Base bills inserted\n`);
+
   const { invoice_data } = await seed.invoice_data((x) => x(invoice_dataN), {
     connect: { profiles, suppliers },
   });
+
+  console.log(`--> ${invoice_data.length} Invoice data inserted\n`);
 
   const { supplier_data } = await seed.supplier_data(
     (x) =>
@@ -110,6 +119,8 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
       })),
     { connect: { invoice_data, supplier_employees, base_bills, profiles } },
   );
+
+  console.log(`--> ${supplier_data.length} Supplier data inserted\n`);
 
   console.log("Database seeded successfully!");
 };
