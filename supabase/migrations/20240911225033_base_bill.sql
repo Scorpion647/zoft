@@ -90,9 +90,3 @@ INSERT INTO
   access.table_permissions (table_name, user_role, permissions)
 VALUES
   ('base_bills', 'administrator', B'1111');
-
-
-INSERT INTO
-  access.table_permissions (table_name, user_role, permissions)
-VALUES
-  ('base_bills', 'employee', B'0001');
