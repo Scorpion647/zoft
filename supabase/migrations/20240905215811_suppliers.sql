@@ -53,10 +53,27 @@ VALUES
 ALTER TABLE public.supplier_employees enable ROW level security;
 
 
+CREATE FUNCTION is_employee (
+  _supplier_id INTEGER,
+  _profile_id UUID DEFAULT auth.uid ()
+) returns BOOLEAN AS $$
+begin
+        return (select true from public.supplier_employees se where se.supplier_id=_supplier_id and se.profile_id = _profile_id) or false;
+end;
+$$ language plpgsql security invoker;
+
+
 CREATE POLICY "Select for supplier employees" ON public.supplier_employees FOR
 SELECT
   TO authenticated USING (
-    public.role_has_permission ('supplier_employees', B'0001')
+    public.supplier_employees.profile_id = auth.uid ()
+    OR public.role_has_permission ('supplier_employees', B'0001')
+    OR (
+      is_employee (
+        public.supplier_employees.supplier_id,
+        auth.uid ()
+      )
+    )
   );
 
 
@@ -77,13 +94,6 @@ FOR UPDATE
 CREATE POLICY "Delete for supplier employees" ON public.supplier_employees FOR delete TO authenticated USING (
   public.role_has_permission ('supplier_employees', B'1000')
 );
-
-
-CREATE POLICY "Employees can select" ON public.supplier_employees FOR
-SELECT
-  TO authenticated USING (
-    public.supplier_employees.profile_id = auth.uid ()
-  );
 
 
 -- rls for suppliers
