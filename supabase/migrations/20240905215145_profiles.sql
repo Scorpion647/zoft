@@ -32,12 +32,6 @@ VALUES
   ('profiles', 'administrator', B'1111');
 
 
-INSERT INTO
-  access.table_permissions (table_name, user_role, permissions)
-VALUES
-  ('profiles', 'employee', B'0001' | B'0100');
-
-
 -- TRIGGER WHEN USER IS INSERTED
 CREATE FUNCTION public.on_user_insert () returns trigger AS $$
 declare
@@ -98,22 +92,20 @@ AFTER delete ON public.profiles FOR each ROW
 EXECUTE procedure public.after_profile_delete ();
 
 
-CREATE POLICY "Select for profiles" ON public.profiles FOR
-SELECT
-  TO authenticated USING (TRUE);
-
-
-CREATE POLICY "Insert for profiles" ON public.profiles FOR insert TO authenticated
+CREATE POLICY "Insert profiles if has permission" ON public.profiles FOR insert TO authenticated
 WITH
   CHECK (public.role_has_permission ('profiles', B'0010'));
 
 
-CREATE POLICY "Update for profiles" ON public.profiles
+CREATE POLICY "Update own profile or has permission" ON public.profiles
 FOR UPDATE
-  TO authenticated USING (public.role_has_permission ('profiles', B'0100'));
+  TO authenticated USING (
+    profile_id = auth.uid ()
+    OR public.role_has_permission ('profiles', B'0100')
+  );
 
 
-CREATE POLICY "Delete for profiles" ON public.profiles FOR delete TO authenticated USING (
+CREATE POLICY "Delete own profile or has permission" ON public.profiles FOR delete TO authenticated USING (
   profile_id = auth.uid ()
   OR public.role_has_permission ('profiles', B'1000')
 );
