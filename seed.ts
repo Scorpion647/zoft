@@ -10,9 +10,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const profilesN = 10;
 const suppliersN = 10;
 const materialsN = 100;
-const base_billsN = 1;
-const invoice_dataN = 1;
-const supplier_dataN = 2;
+const base_billsN = 2;
 
 const main = async () => {
   const seed = await createSeedClient();
@@ -93,7 +91,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     (x) =>
       x(base_billsN, ({ seed }) => ({
         item: copycat.int(seed, { min: 0, max: 1000 }),
-        total_quantity: copycat.int(seed, { min: 0, max: 5000 }),
+        total_quantity: copycat.int(seed, { min: 0, max: 500 }),
         unit_price: copycat.int(seed, { min: 0, max: Infinity }),
       })),
     { connect: { suppliers } },
@@ -101,33 +99,59 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
 
   console.log(`--> ${base_bills.length} Base bills inserted\n`);
 
-  const { invoice_data } = await seed.invoice_data((x) => x(invoice_dataN), {
-    connect: { profiles, suppliers },
-  });
+  let invoice_counter = 0;
+  let supplier_data_counter = 0;
 
-  console.log(`--> ${invoice_data.length} Invoice data inserted\n`);
+  for (let base_bill of base_bills) {
+    const _supplier = suppliers.find(
+      (item) => item.supplier_id && item.supplier_id === base_bill.supplier_id,
+    );
 
-  const { supplier_data } = await seed.supplier_data(
-    (x) =>
-      x(supplier_dataN, ({ seed }) => ({
-        trm: copycat.float(seed, { min: 3800, max: 4500 }),
-        billed_quantity: copycat.int(seed, { min: 0, max: 10 }),
-        billed_unit_price: copycat.int(seed, { min: 0, max: 10000 }),
-        billed_total_price: copycat.int(seed, { min: 0, max: 1000000 }),
-        gross_weight: copycat.float(seed, { min: 0, max: 10000 }),
-        packages: copycat.float(seed, { min: 0, max: 10000 }),
-      })),
-    {
-      connect: {
-        invoice_data,
-        supplier_employees,
-        base_bills,
-        profiles,
+    if (!_supplier || !_supplier.supplier_id) continue;
+
+    const { invoice_data } = await seed.invoice_data(
+      (x) => x({ min: 0, max: 5 }),
+      {
+        connect: { suppliers: [_supplier] },
       },
-    },
-  );
+    );
 
-  console.log(`--> ${supplier_data.length} Supplier data inserted\n`);
+    invoice_counter += invoice_data.length;
+
+    for (let _invoice of invoice_data) {
+      const _employees = supplier_employees.filter(
+        (it) => it.supplier_id === _invoice.supplier_id,
+      );
+
+      const { supplier_data } = await seed.supplier_data(
+        (x) =>
+          x({ max: 10 }, ({ seed }) => ({
+            trm: copycat.float(seed, { min: 3800, max: 4500 }),
+            billed_quantity: copycat.int(seed, { min: 0, max: 20 }),
+            billed_unit_price: copycat.int(seed, { min: 0, max: 10000 }),
+            billed_total_price: copycat.int(seed, { min: 0, max: 1000000 }),
+            gross_weight: copycat.float(seed, { min: 0, max: 10000 }),
+            packages: copycat.float(seed, { min: 0, max: 10000 }),
+            created_by: _employees.at(
+              copycat.int(seed, { min: 0, max: _employees.length - 1 }),
+            )?.profile_id,
+          })),
+        {
+          connect: {
+            invoice_data: [_invoice],
+            supplier_employees: _employees,
+            base_bills: [base_bill],
+          },
+        },
+      );
+
+      supplier_data_counter += supplier_data.length;
+    }
+  }
+
+  console.log(`--> ${invoice_counter} Invoice data inserted\n`);
+
+  console.log(`--> ${supplier_data_counter} Supplier data inserted\n`);
 
   console.log("Database seeded successfully!");
 };
