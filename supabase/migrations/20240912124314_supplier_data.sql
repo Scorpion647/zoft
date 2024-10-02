@@ -9,7 +9,6 @@ CREATE TABLE public.supplier_data (
   billed_currency public.currency NOT NULL,
   gross_weight DECIMAL NOT NULL CHECK (gross_weight >= 0),
   packages DECIMAL NOT NULL CHECK (packages >= 0),
-  supplier_employee_id int4,
   created_by UUID,
   invoice_id UUID NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
@@ -17,7 +16,6 @@ CREATE TABLE public.supplier_data (
   PRIMARY KEY (supplier_data_id),
   FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON UPDATE cascade,
   FOREIGN key (base_bill_id) REFERENCES public.base_bills (base_bill_id) ON DELETE cascade ON UPDATE cascade,
-  FOREIGN key (supplier_employee_id) REFERENCES public.supplier_employees (supplier_employee_id) ON DELETE SET NULL ON UPDATE cascade,
   FOREIGN key (created_by) REFERENCES public.profiles (profile_id) ON DELETE SET NULL ON UPDATE cascade
 );
 
@@ -27,7 +25,6 @@ CREATE FUNCTION supplier_data_search (public.supplier_data) returns TEXT AS $$
               $1.bill_number || ' '
              || $1.gross_weight || ' '
              || $1.packages || ' '
-             || $1.supplier_employee_id || ' '
              || $1.created_by || ' '
              || $1.invoice_id || ' '
              || $1.created_at || ' '

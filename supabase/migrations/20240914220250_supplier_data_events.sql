@@ -4,18 +4,14 @@ ALTER TABLE public.supplier_data enable ROW level security;
 CREATE POLICY "can select supplier data" ON public.supplier_data FOR
 SELECT
   USING (
-    EXISTS (
-      SELECT
-        public.role_has_permission ('supplier_data', B'0001')
-    )
+    public.role_has_permission ('supplier_data', B'0001')
     OR EXISTS (
       SELECT
         1
       FROM
-        public.supplier_employees em
+        public.base_bills
       WHERE
-        em.supplier_employee_id = public.supplier_data.supplier_employee_id
-        AND em.profile_id = auth.uid ()
+        base_bills.base_bill_id = supplier_data.base_bill_id
     )
   );
 
@@ -23,26 +19,14 @@ SELECT
 CREATE POLICY "can insert supplier data" ON public.supplier_data FOR insert
 WITH
   CHECK (
-    EXISTS (
-      SELECT
-        public.role_has_permission ('supplier_data', B'0010')
-    )
+    public.role_has_permission ('supplier_data', B'0010')
     OR EXISTS (
       SELECT
         1
       FROM
-        public.supplier_employees em
+        public.base_bills
       WHERE
-        em.supplier_employee_id = public.supplier_data.supplier_employee_id
-        AND em.profile_id = auth.uid ()
-        AND EXISTS (
-          SELECT
-            1
-          FROM
-            public.base_bills
-          WHERE
-            base_bills.supplier_id = em.supplier_id
-        )
+        base_bills.base_bill_id = supplier_data.base_bill_id
     )
   );
 
@@ -50,51 +34,27 @@ WITH
 CREATE POLICY "can update supplier data" ON public.supplier_data
 FOR UPDATE
   USING (
-    EXISTS (
-      SELECT
-        public.role_has_permission ('supplier_data', B'0100')
-    )
+    public.role_has_permission ('supplier_data', B'0100')
     OR EXISTS (
       SELECT
         1
       FROM
-        public.supplier_employees em
+        public.base_bills
       WHERE
-        em.supplier_employee_id = public.supplier_data.supplier_employee_id
-        AND em.profile_id = auth.uid ()
-        AND EXISTS (
-          SELECT
-            1
-          FROM
-            public.base_bills
-          WHERE
-            base_bills.supplier_id = em.supplier_id
-        )
+        base_bills.base_bill_id = supplier_data.base_bill_id
     )
   );
 
 
 CREATE POLICY "can delete supplier data" ON public.supplier_data FOR delete USING (
-  EXISTS (
-    SELECT
-      public.role_has_permission ('supplier_data', B'1000')
-  )
+  public.role_has_permission ('supplier_data', B'1000')
   OR EXISTS (
     SELECT
       1
     FROM
-      public.supplier_employees em
+      public.base_bills
     WHERE
-      em.supplier_employee_id = public.supplier_data.supplier_employee_id
-      AND em.profile_id = auth.uid ()
-      AND EXISTS (
-        SELECT
-          1
-        FROM
-          public.base_bills
-        WHERE
-          base_bills.supplier_id = em.supplier_id
-      )
+      base_bills.base_bill_id = supplier_data.base_bill_id
   )
 );
 

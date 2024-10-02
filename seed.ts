@@ -117,7 +117,14 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
         gross_weight: copycat.float(seed, { min: 0, max: 10000 }),
         packages: copycat.float(seed, { min: 0, max: 10000 }),
       })),
-    { connect: { invoice_data, supplier_employees, base_bills, profiles } },
+    {
+      connect: {
+        invoice_data,
+        supplier_employees,
+        base_bills,
+        profiles,
+      },
+    },
   );
 
   console.log(`--> ${supplier_data.length} Supplier data inserted\n`);
