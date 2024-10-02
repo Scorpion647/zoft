@@ -84,6 +84,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
         : null,
     })),
   );
+  const material_codes = materials.map((material) => material.material_code);
 
   console.log(`--> ${materials.length} Materials inserted \n`);
 
@@ -93,6 +94,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
         item: copycat.int(seed, { min: 0, max: 1000 }),
         total_quantity: copycat.int(seed, { min: 0, max: 500 }),
         unit_price: copycat.int(seed, { min: 0, max: Infinity }),
+        material_code: copycat.oneOf(seed, material_codes),
       })),
     { connect: { suppliers } },
   );

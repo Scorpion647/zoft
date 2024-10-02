@@ -9,11 +9,9 @@ SELECT
       SELECT
         1
       FROM
-        public.supplier_employees em
-        INNER JOIN public.suppliers USING (supplier_id)
-        INNER JOIN public.base_bills USING (supplier_id)
+        public.base_bills b
       WHERE
-        em.profile_id = auth.uid ()
+        b.material_code = public.materials.material_code
     )
   );
 

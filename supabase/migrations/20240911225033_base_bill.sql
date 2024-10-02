@@ -35,12 +35,6 @@ VALUES
   ('materials', 'administrator', B'1111');
 
 
-INSERT INTO
-  access.table_permissions (table_name, user_role, permissions)
-VALUES
-  ('materials', 'employee', B'0101');
-
-
 CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
 
 
@@ -62,7 +56,7 @@ CREATE TABLE public.base_bills (
   approved_quantity positive_integer NOT NULL DEFAULT 0,
   pending_quantity positive_integer NOT NULL DEFAULT 0,
   total_quantity positive_integer NOT NULL DEFAULT 0,
-  material_code VARCHAR(50) NOT NULL,
+  material_code VARCHAR(255) NOT NULL,
   purchase_order VARCHAR(50) NOT NULL,
   measurement_unit VARCHAR(50) NOT NULL,
   unit_price BIGINT NOT NULL,
