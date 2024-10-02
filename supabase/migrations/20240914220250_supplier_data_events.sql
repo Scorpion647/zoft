@@ -69,23 +69,53 @@ begin
     select * into _base_bill from public.base_bills where base_bill_id = new.base_bill_id;
     select * into _invoice from public.invoice_data where invoice_id = new.invoice_id;
 
-    if _base_bill is null then
+    if (_invoice is null) then
         raise insufficient_privilege using message =
-                'You are not allowed to add or modify supplier data for this base bill';
+                'The selected invoice does not exist or you do not have enough privileges to access it';
+    end if;
+
+    if (_base_bill is null) then
+        raise insufficient_privilege using message =
+                'The selected base bill does not exist or you do not have enough privileges to access it';
+    end if;
+
+    if (_base_bill.supplier_id <> _invoice.supplier_id) then
+        raise insufficient_privilege using message =
+                'The base bill and the invoice do not belong to the same supplier';
     end if;
 
     _available_quantity := _base_bill.total_quantity;
 
     if (_invoice.state='pending') then
-        _available_quantity := _available_quantity - (_base_bill.pending_quantity - old.billed_quantity);
+        _available_quantity := _available_quantity - ((_base_bill.pending_quantity - coalesce(old.billed_quantity, 0))+ _base_bill.approved_quantity);
     elseif (_invoice.state='approved') then
-        _available_quantity := _available_quantity - (_base_bill.approved_quantity - old.billed_quantity);
+        _available_quantity := _available_quantity - ((_base_bill.approved_quantity - coalesce(old.billed_quantity, 0))+ _base_bill.pending_quantity);
     end if;
 
-    if (new.billed_quantity > _available_quantity or new.billed_quantity < 0) then
+    if (new.billed_quantity > _available_quantity) then
         raise data_exception using message =
-                'You cannot bill more than the quantity available. Current available quantity in bill '||_base_bill.purchase_order ||': ' || (_base_bill.total_quantity-(_base_bill.approved_quantity+_base_bill.pending_quantity))::text ||
+                'You cannot bill more than the quantity available. Current available quantity in bill '||_base_bill.purchase_order ||': ' || _available_quantity::text ||
                 ' Billed quantity: ' || new.billed_quantity::text;
+    elseif (new.billed_quantity < 0) then
+        raise data_exception using message =
+                'You cannot bill a negative quantity';
+    else
+        if (_invoice.state='approved') then
+            if (user_is('administrator')) then
+                update public.base_bills
+                set approved_quantity=approved_quantity+new.billed_quantity - coalesce(old.billed_quantity, 0)
+                where base_bills.base_bill_id = new.base_bill_id;
+            else
+                update public.invoice_data set state = 'pending' where invoice_id = new.invoice_id;
+                select * into _invoice from public.invoice_data where invoice_id = new.invoice_id;
+            end if;
+        end if;
+
+        if (_invoice.state='pending') then
+            update public.base_bills
+            set pending_quantity=pending_quantity+new.billed_quantity-coalesce(old.billed_quantity, 0)
+            where base_bills.base_bill_id = new.base_bill_id;
+        end if;
     end if;
 
     return new;

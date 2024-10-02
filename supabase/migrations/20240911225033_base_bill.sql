@@ -44,7 +44,16 @@ VALUES
 CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
 
 
-CREATE DOMAIN positive_integer AS INTEGER CHECK (value >= 0);
+CREATE FUNCTION is_positive_integer (INTEGER) returns BOOLEAN AS $$ begin
+    if ($1 < 0) then
+        raise exception 'Value must be positive. Value: %', $1;
+    end if;
+
+    return true;
+end; $$ language plpgsql;
+
+
+CREATE DOMAIN positive_integer AS INTEGER CHECK (is_positive_integer (value));
 
 
 CREATE TABLE public.base_bills (

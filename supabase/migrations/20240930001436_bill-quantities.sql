@@ -1,46 +1,4 @@
 CREATE
-OR REPLACE function public.update_invoice_state () returns trigger AS $$
-    declare
-        invoice invoice_data%rowtype;
-begin
-    select * into invoice from public.invoice_data where invoice_id = new.invoice_id;
-
-    if (invoice.state = 'approved') then
-        update public.base_bills
-        set approved_quantity=approved_quantity+new.billed_quantity-coalesce(old.billed_quantity, 0)
-        where base_bills.base_bill_id = new.base_bill_id;
-
-        update public.invoice_data set state = 'pending' where invoice_id = new.invoice_id;
-    elseif (invoice.state = 'pending') then
-        update public.base_bills
-        set pending_quantity=pending_quantity + new.billed_quantity - coalesce(old.billed_quantity, 0)
-        where base_bills.base_bill_id = new.base_bill_id;
-
-    else
-        update public.invoice_data set state = 'pending' where invoice_id = new.invoice_id;
-
-        update public.base_bills
-        set pending_quantity=pending_quantity+new.billed_quantity
-        where base_bills.base_bill_id = new.base_bill_id;
-    end if;
-
-    return new;
-end;
-$$ language plpgsql security definer;
-
-
-CREATE TRIGGER update_base_bill_quantity_after_supplier_data_insert
-AFTER insert ON public.supplier_data FOR each ROW
-EXECUTE procedure public.update_invoice_state ();
-
-
-CREATE TRIGGER update_base_bill_quantity_after_supplier_data_update
-AFTER
-UPDATE ON public.supplier_data FOR each ROW
-EXECUTE procedure public.update_invoice_state ();
-
-
-CREATE
 OR REPLACE function public.handle_invoice_state_change () returns trigger AS $$
     declare
         _quantity integer default 0;
