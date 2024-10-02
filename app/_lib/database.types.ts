@@ -57,8 +57,8 @@ export type Database = {
       };
       base_bills: {
         Row: {
+          approved_quantity: number;
           base_bill_id: string;
-          computed_quantity: number;
           created_at: string;
           currency: Database["public"]["Enums"]["currency"];
           description: string | null;
@@ -66,16 +66,16 @@ export type Database = {
           material_code: string;
           measurement_unit: string;
           net_price: number | null;
+          pending_quantity: number;
           purchase_order: string;
-          real_quantity: number;
           supplier_id: number;
           total_quantity: number;
           unit_price: number;
           base_bill_search: string | null;
         };
         Insert: {
+          approved_quantity?: number;
           base_bill_id?: string;
-          computed_quantity?: number;
           created_at?: string;
           currency: Database["public"]["Enums"]["currency"];
           description?: string | null;
@@ -83,15 +83,15 @@ export type Database = {
           material_code: string;
           measurement_unit: string;
           net_price?: number | null;
+          pending_quantity?: number;
           purchase_order: string;
-          real_quantity?: number;
           supplier_id: number;
           total_quantity?: number;
           unit_price: number;
         };
         Update: {
+          approved_quantity?: number;
           base_bill_id?: string;
-          computed_quantity?: number;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency"];
           description?: string | null;
@@ -99,8 +99,8 @@ export type Database = {
           material_code?: string;
           measurement_unit?: string;
           net_price?: number | null;
+          pending_quantity?: number;
           purchase_order?: string;
-          real_quantity?: number;
           supplier_id?: number;
           total_quantity?: number;
           unit_price?: number;
@@ -228,11 +228,10 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           gross_weight: number;
-          invoice_id: string | null;
+          invoice_id: string;
           modified_at: string;
           packages: number;
           supplier_data_id: string;
-          supplier_employee_id: number | null;
           trm: number;
           supplier_data_search: string | null;
         };
@@ -246,11 +245,10 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           gross_weight: number;
-          invoice_id?: string | null;
+          invoice_id: string;
           modified_at?: string;
           packages: number;
           supplier_data_id?: string;
-          supplier_employee_id?: number | null;
           trm: number;
         };
         Update: {
@@ -263,11 +261,10 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           gross_weight?: number;
-          invoice_id?: string | null;
+          invoice_id?: string;
           modified_at?: string;
           packages?: number;
           supplier_data_id?: string;
-          supplier_employee_id?: number | null;
           trm?: number;
         };
         Relationships: [
@@ -291,13 +288,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "invoice_data";
             referencedColumns: ["invoice_id"];
-          },
-          {
-            foreignKeyName: "supplier_data_supplier_employee_id_fkey";
-            columns: ["supplier_employee_id"];
-            isOneToOne: false;
-            referencedRelation: "supplier_employees";
-            referencedColumns: ["supplier_employee_id"];
           },
         ];
       };
@@ -369,6 +359,19 @@ export type Database = {
           "": unknown;
         };
         Returns: string;
+      };
+      is_employee: {
+        Args: {
+          _supplier_id: number;
+          _profile_id?: string;
+        };
+        Returns: boolean;
+      };
+      is_positive_integer: {
+        Args: {
+          "": number;
+        };
+        Returns: boolean;
       };
       material_search: {
         Args: {
