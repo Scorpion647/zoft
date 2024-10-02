@@ -4,8 +4,45 @@ import { createClient } from "@/app/_lib/supabase/client";
 import { Arrayable, SetRequired } from "type-fest";
 import { Tables, TablesUpdate } from "../database.types";
 import { handleError } from "../definitions";
+import { MultiSelectQuery } from "../database.utils";
 
 const supabase = createClient();
+
+export async function selectProfiles(
+  params: MultiSelectQuery<Tables<"profiles">>,
+) {
+  let query = supabase.from("profiles").select("*");
+
+  if (params.search && params.search.trim().length > 0) {
+    query = query.textSearch("full_name", params.search, {
+      type: "websearch",
+    });
+  }
+
+  if (params.orderBy) {
+    const orderList =
+      params.orderBy instanceof Array ? params.orderBy : [params.orderBy];
+
+    for (let it of orderList) {
+      const { column, options } = it;
+      query = query.order(column, options);
+    }
+  }
+
+  const { page, limit } = params;
+
+  query =
+    page ?
+      query.range((page - 1) * limit, page * limit - 1)
+    : query.limit(limit);
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+  return data;
+}
 
 export async function getProfile(profile_id: Tables<"profiles">["profile_id"]) {
   const { data, error } = await supabase
