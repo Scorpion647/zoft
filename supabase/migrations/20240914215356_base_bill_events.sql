@@ -4,7 +4,8 @@ ALTER TABLE public.base_bills enable ROW level security;
 CREATE POLICY "select for base bills" ON public.base_bills FOR
 SELECT
   TO authenticated USING (
-    is_employee (public.base_bills.supplier_id, auth.uid ())
+    public.role_has_permission ('base_bills', B'0001')
+    OR is_employee (public.base_bills.supplier_id, auth.uid ())
   );
 
 
