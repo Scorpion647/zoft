@@ -77,49 +77,9 @@ export async function selectSupplierData(
 
 export async function insertSupplierData(
   supplierData: Writable<Arrayable<TablesInsert<"supplier_data">>>,
-  supplier_target?: Tables<"suppliers">["supplier_id"],
 ) {
-  let inferedInvoice: Tables<"invoice_data">["invoice_id"] | undefined;
-
   const supplierDataList = (supplierData =
     supplierData instanceof Array ? supplierData : [supplierData]);
-
-  let idx = 0;
-
-  for (let item of supplierDataList) {
-    if (!item.invoice_id) {
-      // If there is no infered invoice, create it
-      if (!inferedInvoice) {
-        let invoiceData: Tables<"invoice_data">[] | undefined;
-
-        if (!supplier_target) {
-          if (!item.supplier_employee_id) {
-            throw Error(`No supplier employee set for item ${item}`);
-          }
-
-          const employeeData = await selectSingleSupplierEmployee(
-            item.supplier_employee_id,
-          );
-          invoiceData = await insertInvoice({
-            supplier_id: employeeData.supplier_id,
-          });
-        } else {
-          invoiceData = await insertInvoice({
-            supplier_id: supplier_target,
-          });
-        }
-
-        inferedInvoice = invoiceData[0].invoice_id;
-      }
-
-      // Associate the infered invoice with the item whithout invoice
-      if (inferedInvoice) {
-        item.invoice_id = inferedInvoice;
-      }
-    }
-
-    idx++;
-  }
 
   const { data, error } = await supabase
     .from("supplier_data")
