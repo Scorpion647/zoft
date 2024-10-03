@@ -368,7 +368,7 @@ export type Database = {
         };
         Returns: boolean;
       };
-      is_positive_integer: {
+      is_positive_value: {
         Args: {
           "": number;
         };
