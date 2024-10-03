@@ -92,7 +92,7 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
     (x) =>
       x(base_billsN, ({ seed }) => ({
         item: copycat.int(seed, { min: 0, max: 1000 }),
-        total_quantity: copycat.int(seed, { min: 0, max: 500 }),
+        total_quantity: copycat.float(seed, { min: 500, max: 700 }),
         unit_price: copycat.int(seed, { min: 0, max: Infinity }),
         material_code: copycat.oneOf(seed, material_codes),
       })),
@@ -129,9 +129,12 @@ const feed = async (seed: SeedClient, supabase: SupabaseClient<Database>) => {
         (x) =>
           x({ max: 10 }, ({ seed }) => ({
             trm: copycat.float(seed, { min: 3800, max: 4500 }),
-            billed_quantity: copycat.int(seed, { min: 0, max: 20 }),
-            billed_unit_price: copycat.int(seed, { min: 0, max: 10000 }),
-            billed_total_price: copycat.int(seed, { min: 0, max: 1000000 }),
+            billed_quantity: copycat.float(seed, { min: 0, max: 20 }),
+            billed_unit_price: copycat.float(seed, { min: 0, max: 1000 }),
+            billed_total_price: copycat.float(seed, {
+              min: 500,
+              max: 1000000,
+            }),
             gross_weight: copycat.float(seed, { min: 0, max: 10000 }),
             packages: copycat.float(seed, { min: 0, max: 10000 }),
             created_by: _employees.at(
