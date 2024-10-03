@@ -2,11 +2,9 @@
 
 import { Tables, TablesInsert, TablesUpdate } from "@lib/database.types";
 import { createClient } from "@lib/supabase/client";
+import { Prettify } from "@lib/utils/types";
 import { Arrayable, SetRequired, Writable } from "type-fest";
 import { MultiSelectQuery } from "../database.utils";
-import { Prettify } from "@lib/utils/types";
-import { selectSingleSupplierEmployee } from "./supplier_employee";
-import { insertInvoice, selectInvoice_data } from "./invoice_data";
 
 const supabase = createClient();
 
