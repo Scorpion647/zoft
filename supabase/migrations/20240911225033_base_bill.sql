@@ -38,7 +38,7 @@ VALUES
 CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
 
 
-CREATE FUNCTION is_positive_integer (INTEGER) returns BOOLEAN AS $$ begin
+CREATE FUNCTION is_positive_value (float4) returns BOOLEAN AS $$ begin
     if ($1 < 0) then
         raise exception 'Value must be positive. Value: %', $1;
     end if;
@@ -47,15 +47,18 @@ CREATE FUNCTION is_positive_integer (INTEGER) returns BOOLEAN AS $$ begin
 end; $$ language plpgsql;
 
 
-CREATE DOMAIN positive_integer AS INTEGER CHECK (is_positive_integer (value));
+CREATE DOMAIN positive_float AS float4 CHECK (is_positive_value (value));
+
+
+CREATE DOMAIN positive_integer AS INTEGER CHECK (is_positive_value (value::float4));
 
 
 CREATE TABLE public.base_bills (
   base_bill_id UUID DEFAULT gen_random_uuid () NOT NULL,
   item positive_integer NOT NULL,
-  approved_quantity positive_integer NOT NULL DEFAULT 0,
-  pending_quantity positive_integer NOT NULL DEFAULT 0,
-  total_quantity positive_integer NOT NULL DEFAULT 0,
+  approved_quantity positive_float NOT NULL DEFAULT 0,
+  pending_quantity positive_float NOT NULL DEFAULT 0,
+  total_quantity positive_float NOT NULL DEFAULT 0,
   material_code VARCHAR(255) NOT NULL,
   purchase_order VARCHAR(50) NOT NULL,
   measurement_unit VARCHAR(50) NOT NULL,
