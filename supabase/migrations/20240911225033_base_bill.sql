@@ -38,7 +38,7 @@ VALUES
 CREATE TYPE public.currency AS ENUM('COP', 'USD', 'EUR');
 
 
-CREATE FUNCTION is_positive_value (float4) returns BOOLEAN AS $$ begin
+CREATE FUNCTION is_positive_value (float8) returns BOOLEAN AS $$ begin
     if ($1 < 0) then
         raise exception 'Value must be positive. Value: %', $1;
     end if;
@@ -47,7 +47,7 @@ CREATE FUNCTION is_positive_value (float4) returns BOOLEAN AS $$ begin
 end; $$ language plpgsql;
 
 
-CREATE DOMAIN positive_float AS float4 CHECK (is_positive_value (value));
+CREATE DOMAIN positive_float AS float8 CHECK (is_positive_value (value));
 
 
 CREATE DOMAIN positive_integer AS INTEGER CHECK (is_positive_value (value::float4));

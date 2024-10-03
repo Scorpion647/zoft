@@ -3,7 +3,7 @@ CREATE TABLE public.supplier_data (
   base_bill_id UUID NOT NULL,
   bill_number VARCHAR(50) NOT NULL,
   trm DECIMAL NOT NULL,
-  billed_quantity positive_integer NOT NULL,
+  billed_quantity positive_float NOT NULL,
   billed_unit_price BIGINT NOT NULL CHECK (billed_unit_price >= 0),
   billed_total_price BIGINT NOT NULL CHECK (billed_total_price >= 0),
   billed_currency public.currency NOT NULL,
