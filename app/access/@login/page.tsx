@@ -1,21 +1,16 @@
 "use client";
-import Image from "next/image";
 import { login } from "@/app/_lib/login";
 import { useFormContext } from "@/app/_lib/utils/formContext";
 import AccessForm, { FormType } from "@/app/_ui/components/accessForm";
-import AccessCardContainer from "@/app/_ui/components/accessCardContainer";
+import Image from "next/image";
+
 import {
-  Select,
-  Stack,
-  HStack,
-  VStack,
-  Text,
-  Input,
-  Button,
   Box,
   ChakraProvider,
-  IconButton,
   Heading,
+  HStack,
+  Text,
+  VStack,
 } from "@chakra-ui/react";
 
 export default function LoginPage() {
@@ -27,8 +22,14 @@ export default function LoginPage() {
   return (
     <ChakraProvider>
       <div className="w-full flex items-center justify-center lg:w-1/2 bg-gradient-to-tr from-green-900 to-green-700 ">
-        <Box className="bg-gradient-to-tr border-2 border-black from-gray-200 to-gray-300 px-10 py-20 rounded-3xl">
+        <Box className="bg-gradient-to-tr border-2 border-black from-gray-200 to-gray-300 px-10 py-8 rounded-3xl">
           <VStack>
+            <Image
+              src={"/grupo-ecopetrol.png"}
+              alt="Logo del sitio"
+              width={200}
+              height={50}
+            />
             <Heading
               mb="2"
               h={10}
@@ -39,9 +40,6 @@ export default function LoginPage() {
             </Heading>
             <AccessForm type={FormType.Login} action={handleLogin} />
 
-            <IconButton colorScheme="gray" aria-label="Search database">
-              <Image alt="" src="/google.png" width={30} height={30} />
-            </IconButton>
             <VStack spacing="0px">
               <Text fontSize="sm">¿No esta registrado?</Text>
               <HStack style={{ marginBottom: "40%" }}>

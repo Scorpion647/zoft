@@ -1,22 +1,17 @@
 "use client";
-import { useFormContext } from "@/app/_lib/utils/formContext";
-import { FormType } from "@/app/_ui/components/accessForm";
-import AccessForm from "@/app/_ui/components/accessForm";
 import { signup } from "@/app/_lib/signup";
-import AccessCardContainer from "@/app/_ui/components/accessCardContainer";
+import { useFormContext } from "@/app/_lib/utils/formContext";
+import AccessForm, { FormType } from "@/app/_ui/components/accessForm";
 import {
-  Select,
-  Stack,
-  HStack,
-  VStack,
-  Text,
-  Input,
-  Button,
   Box,
   ChakraProvider,
-  IconButton,
   Heading,
+  HStack,
+  Text,
+  VStack,
 } from "@chakra-ui/react";
+
+import Image from "next/image";
 
 export default function SignupPage() {
   const { setFormType } = useFormContext();
@@ -27,8 +22,14 @@ export default function SignupPage() {
   return (
     <ChakraProvider>
       <div className="w-full flex items-center justify-center lg:w-1/2 bg-gradient-to-tr from-green-900 to-green-700 ">
-        <Box className="bg-gradient-to-tr border-2 border-black from-gray-200 to-gray-300 px-10 py-20 rounded-3xl">
+        <Box className="bg-gradient-to-tr border-2 border-black from-gray-200 to-gray-300 px-10 py-8 rounded-3xl">
           <VStack>
+            <Image
+              src={"/grupo-ecopetrol.png"}
+              alt="Logo del sitio"
+              width={200}
+              height={50}
+            />
             <Heading
               mb="2"
               h={10}
