@@ -14,7 +14,7 @@ export async function selectProfiles(
   let query = supabase.from("profiles").select("*");
 
   if (params.search && params.search.trim().length > 0) {
-    query = query.textSearch("full_name", params.search, {
+    query = query.textSearch("profiles_search", params.search, {
       type: "websearch",
     });
   }

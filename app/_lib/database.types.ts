@@ -190,6 +190,7 @@ export type Database = {
           profile_id: string;
           updated_at: string | null;
           user_role: "administrator" | "employee" | "guest" | null;
+          profiles_search: string | null;
         };
         Insert: {
           created_at?: string | null;
@@ -374,6 +375,12 @@ export type Database = {
         Returns: boolean;
       };
       material_search: {
+        Args: {
+          "": unknown;
+        };
+        Returns: string;
+      };
+      profiles_search: {
         Args: {
           "": unknown;
         };

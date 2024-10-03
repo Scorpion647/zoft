@@ -17,6 +17,11 @@ CREATE TABLE public.profiles (
 );
 
 
+CREATE FUNCTION profiles_search (public.profiles) returns TEXT AS $$
+select $1.full_name || ' ' || $1.email;
+$$ language sql immutable;
+
+
 ALTER TABLE public.profiles enable ROW level security;
 
 
