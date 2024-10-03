@@ -1,36 +1,55 @@
-import { EmailTemplate } from "@email-templates/supplier-data";
+import {
+  EmailTemplate,
+  type EmailTemplateProps,
+} from "@/app/_ui/email-templates/invoice";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextApiRequest, res: NextApiResponse) {
-  const { email, purchase_order, bill, date, supplier_name, invoice_id } =
-    await req.body;
+  const {
+    email,
+    purchase_order,
+    bill,
+    date,
+    supplier_name,
+    invoice_id,
+    type,
+    reason,
+    body,
+    subject,
+  } = await req.body;
 
   if (
-    !email ||
-    !purchase_order ||
-    !bill ||
+    !invoice_id ||
+    !type ||
     !date ||
     !supplier_name ||
-    !invoice_id
+    !bill ||
+    !purchase_order
   ) {
     return res.status(400).json({ error: { message: "Invalid request" } });
   }
+
+  const props: EmailTemplateProps = {
+    bill,
+    date,
+    invoice_id,
+    purchase_order,
+    supplier_name,
+    type,
+  };
+
+  if (reason) props.reason = reason;
+  if (body) props.body = body;
 
   try {
     const { data, error } = await resend.emails.send({
       from: "Zofzf team <team@zofzf.online>",
       to: [email],
-      subject: "Solicitud recibida",
-      react: EmailTemplate({
-        purchase_order: purchase_order,
-        bill: bill,
-        date: date,
-        supplier: supplier_name,
-        invoice_id: invoice_id,
-      }),
+      subject: subject ?? "Aviso",
+      react: EmailTemplate(props),
     });
 
     if (error) {

@@ -1,11 +1,14 @@
 import * as React from "react";
 
-interface EmailTemplateProps {
+export interface EmailTemplateProps {
   invoice_id: string;
+  type: string;
   date: string;
-  supplier: string;
+  supplier_name: string;
   bill: string;
   purchase_order: string;
+  reason?: string;
+  body?: string;
 }
 
 export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
@@ -15,8 +18,13 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
     <h1>Tu solicitud ha sido recibida para revisión</h1>
     <ul>
       <li>
-        <b>Tipo de solicitud:</b> <span>Ingreso</span>
+        <b>Tipo de solicitud:</b> <span>{params.type}</span>
       </li>
+      {params.reason && (
+        <li>
+          <b>Razón:</b> <span>{params.reason}</span>
+        </li>
+      )}
       <li>
         <b>Número de solicitud:</b> <span>{params.invoice_id}</span>
       </li>
@@ -24,7 +32,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
         <b>Fecha Solicitud:</b> <span>{params.date}</span>
       </li>
       <li>
-        <b>Proveedor:</b> <span>{params.supplier}</span>
+        <b>Proveedor:</b> <span>{params.supplier_name}</span>
       </li>
       <li>
         <b>Factura:</b> <span>{params.bill}</span>
@@ -33,5 +41,7 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
         <b>Orden de compra:</b> <span>{params.purchase_order}</span>
       </li>
     </ul>
+
+    {params.body && <div>{params.body}</div>}
   </div>
 );
