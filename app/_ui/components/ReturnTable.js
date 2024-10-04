@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
@@ -6,7 +7,8 @@ import { getRecords, getRecordsInfo, updateRecordInfo, getRecordInfo, getMateria
 import { FormControl, FormLabel, Spinner, Switch, Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, Checkbox } from "@chakra-ui/react";
 import {handleExport} from '@/app/_ui/ExportButton'
 import { updateMaterial, insertMaterial } from '@/app/_lib/database/materials';
-
+import { selectSingleInvoice, updateInvoice } from '@/app/_lib/database/invoice_data';
+import { FaSave } from "react-icons/fa";
 
 function formatMoney(amount) {
   return amount.toLocaleString('en-US', {
@@ -179,7 +181,7 @@ const ReturnTable = ({ suppliers, volver }) => {
   const [isLoading1, setIsLoading1] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
   const [Order, setOrder] = useState("");
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [status, setStatus] = useState('');
   const [Data,setData] = useState([])
   useEffect(() => {
     fetchData()
@@ -207,18 +209,16 @@ const ReturnTable = ({ suppliers, volver }) => {
       const mergeCells = [];
       let startRow = null;
       let lastValue8 = null;
-      let lastValue20 = null;
       let lastValue = null;
       let lastValue6 = null;
 
       for (let row = 0; row < data.length; row++) {
         const value8 = data[row][8];
-        const value20 = data[row][20];
         const value = data[row][0];
         const value6 = data[row][6];
 
 
-        if (value8 === lastValue8 && value20 === lastValue20) {
+        if (value8 === lastValue8 ) {
           if (startRow === null) {
 
             startRow = row - 1;
@@ -227,12 +227,10 @@ const ReturnTable = ({ suppliers, volver }) => {
 
           if (startRow !== null) {
 
-            mergeCells.push({ row: startRow, col: 20, rowspan: row - startRow, colspan: 1 });
             mergeCells.push({ row: startRow, col: 0, rowspan: row - startRow, colspan: 1 });
             mergeCells.push({ row: startRow, col: 6, rowspan: row - startRow, colspan: 1 });
 
             for (let i = startRow + 1; i < row; i++) {
-              data[i][20] = data[startRow][20];
               data[i][0] = data[startRow][0];
               data[i][6] = data[startRow][6];
             }
@@ -242,20 +240,17 @@ const ReturnTable = ({ suppliers, volver }) => {
         }
 
         lastValue8 = value8;
-        lastValue20 = value20;
         lastValue = value
         lastValue6 = value6
       }
 
 
       if (startRow !== null) {
-        mergeCells.push({ row: startRow, col: 20, rowspan: data.length - startRow, colspan: 1 });
         mergeCells.push({ row: startRow, col: 0, rowspan: data.length - startRow, colspan: 1 });
         mergeCells.push({ row: startRow, col: 6, rowspan: data.length - startRow, colspan: 1 });
 
 
         for (let i = startRow + 1; i < data.length; i++) {
-          data[i][20] = data[startRow][20];
           data[i][0] = data[startRow][0];
           data[i][6] = data[startRow][6];
         }
@@ -265,54 +260,18 @@ const ReturnTable = ({ suppliers, volver }) => {
     }
   };
 
+const inputvalue = async () => {
+const invoice = selectSingleInvoice(suppliers)
+if((await invoice).state === "approved" ){
+return "approved"
+}else if((await invoice).state === "pending"){
+  return "pending"
+}else if((await invoice).state === "rejected"){
+  return "rejected"
+}
+}
 
 
-
-  const handleAfterChange = async (changes) => {
-    if (changes) {
-      for (const [row, prop, oldValue, newValue] of changes) {
-        if (prop === 20) {
-          const columnToMatch = 8;
-
-
-          
-        
-          const valueToMatch = Data[row][columnToMatch];
-          
-   
-          const rowsToUpdate = Data
-          
-            .map((rowData, index) => {
-              if (rowData[columnToMatch] === valueToMatch) {
-
-                return { id: rowData[0], secondaryId: rowData[1], newValue };
-              }
-              return null;
-            })
-            .filter(update => update !== null);
-            let estado = "pending"
-            if(newValue === "Pendiente"){
-              estado = "pending"
-            }else if(newValue === "Aprobado"){
-              estado = "approved"
-            }else if(newValue === "Rechazado"){
-              estado = "rejected"
-            }
-          let orden = ""
-
-          for (const { id, secondaryId, newValue } of rowsToUpdate) {
-            if(id !== null && id !== undefined){
-              orden = id
-            }
-            const record = await getRecord(orden,secondaryId)
-            const info = await getRecordInfo(record.base_bill_id)
-            
-          }
-
-        }
-      }
-    }
-  };
 
   
   const [isModalOpen, setModalOpen] = useState(false);
@@ -386,12 +345,12 @@ const ReturnTable = ({ suppliers, volver }) => {
        
         }
 
-        let estado = "pending"
-        if(invo.approved === false && invo.create_at === invo.update_at){
+        let estado = ""
+        if(invo.state === "pending"){
           estado = "pending"
-        }else if(invo.approved === false && invo.create_at !== invo.update_at){
+        }else if(invo.state === "rejected"){
           estado = "rejected"
-        }else if(invo.approved === true){
+        }else if(invo.state === "approved"){
           estado = "approved"
         }
         let oc = record.purchase_order
@@ -420,7 +379,6 @@ const ReturnTable = ({ suppliers, volver }) => {
           supdata.gross_weight,  // PN
           supdata.packages,      // Bultos
           conversion,            // Conversion
-          estado                 // Estado
         ]);
         })
       )
@@ -473,6 +431,14 @@ const ReturnTable = ({ suppliers, volver }) => {
     calculateSum2()
     calculateSum3()
   }, [Data]);
+
+  useEffect(() => {
+  const hola = async () => {
+    const prue = await inputvalue()
+    setStatus(prue)
+  }
+  hola()
+  }, []);
   const calculateSum = () => {
     if (Data) {
       const columnIndex = 14; 
@@ -544,6 +510,18 @@ const ReturnTable = ({ suppliers, volver }) => {
  return formattedValue;
  }
 
+ const change = async (e) => {
+  setStatus(e)
+  await updateInvoice({invoice_id: suppliers, state: e })
+ }
+ const [isapproved, setisapproved] = useState(false);
+ useEffect(() => {
+if(status === "approved"){
+  setisapproved(true)
+}else{
+  setisapproved(false)
+}
+ },[status])
 
   return (
     <div className='items-center justify-self-center h-[400px] w-full'>
@@ -567,15 +545,30 @@ const ReturnTable = ({ suppliers, volver }) => {
                   >
                     <Box position="absolute" right={2}>
 
-                      <Button onClick={() => handleExportar()} bgColor="#F1D803" textColor="black"  >
+                      <Button isDisabled={!isapproved} onClick={() => handleExportar()} bgColor="#F1D803" textColor="black"  >
                         Export
                       </Button>
 
                     </Box>
+                    
                     <Box flex={1} textAlign="start">
                       <Button onClick={() => volver()} bgColor="#F1D803" textColor="black">
                         Regresar
                       </Button>
+                    </Box>
+                    <Box flex={1} textAlign="start">
+
+                      <HStack>
+                      <Select width="50%" bg="white" onChange={(e) => change(e.target.value)} value={status}>
+                      <option  value="approved">APROBADO</option>
+                      <option value="pending">PENDIENTE</option>
+                      <option value="rejected">RECHAZADO</option>
+                        </Select>
+                        <Button onClick={() => fetchData()} bgColor="#F1D803" textColor="black">
+                       <FaSave/> 
+                      </Button>
+                      </HStack>
+
                     </Box>
                     <Box flex={1} textAlign="center">
                     
@@ -652,7 +645,6 @@ const ReturnTable = ({ suppliers, volver }) => {
                         { data: 17, readOnly: true, title: 'PN' },
                         { data: 18, readOnly: true, title: 'Bultos' },
                         { data: 19, readOnly: true, title: 'Conversion' },
-                        { data: 20, width: 100, type: 'dropdown', title: 'Estado', renderer: 'html', source: ['Pendiente', 'Aprobado', 'Rechazado'] }
                       ]}
                       width="100%"
                       scrollHorizontally={false}
@@ -664,7 +656,7 @@ const ReturnTable = ({ suppliers, volver }) => {
                       rowHeaders={true}
                       stretchH="all"
                       mergeCells={mergeCellsConfig}
-                      beforeChange={handleAfterChange}
+                      //beforeChange={handleAfterChange}
                       fixedColumnsStart={3}
                       afterOnCellMouseDown={handleCellClick}
                       beforeContextMenuShow={(instance, menu, coords) => {
@@ -742,24 +734,7 @@ const ReturnTable = ({ suppliers, volver }) => {
                           }
 
 
-                          if (col === 20) {
-                            if (value === "Pendiente") {
-                              td.style.backgroundColor = editableStyle.backgroundColor;
-                              td.title = 'Pendiente a revision';
-                            } else if (value === "Aprobado") {
-                              if(row > 0){
-                                
-                              }
-                              td.style.backgroundColor = reset.backgroundColor;
-                              td.title = '';
-                            } else if (value === "Rechazado") {
-                              td.style.backgroundColor = readonlyStyle.backgroundColor;
-                              td.title = '';
-                            }else{
-                              td.style.backgroundColor = vacio.backgroundColor;
-                              td.title = '';
-                            }
-                          }
+                          
                           if (col === 15) {
                             if (value !== "NACIONAL" && value !== "NACIONALIZADO" && value !== "INVALIDO") {
                               td.style.backgroundColor = readonlyStyle.backgroundColor;

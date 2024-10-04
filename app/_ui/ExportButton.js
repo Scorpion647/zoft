@@ -1,31 +1,33 @@
+'use client';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import { getMaterial, getRecord, getRecordInfo } from '@/app/_lib/database/service';
 
 async function fetchMaterialData(materialCode) {
-    const material = await getMaterial(materialCode);
-    return material;
+    return await getMaterial(materialCode);
 }
 
 function removeTrailingZeros(num) {
     let str = num.toString();
-    if (str.includes('.00')) {
-        return str.replace('.00', '');
-    }
-    return str;
+    return str.includes('.00') ? str.replace('.00', '') : str;
 }
 
 async function fetchRecordAndMaterialData(recordId) {
-    return { record: { material_code: recordId }, material: await fetchMaterialData(recordId) };
+    const material = await fetchMaterialData(recordId);
+    return { record: { material_code: recordId }, material };
 }
 
 export async function handleExport(visibleData) {
+    let order = "";
     try {
         const dataPromises = visibleData.map(async (row) => {
             const recordId = row[0];
+            if(order == ""){
+                order = row[0]
+            }
             const fetchedData = await fetchRecordAndMaterialData(recordId);
-            const record = await getRecord(row[0], row[1]);
-            const info = await getRecordInfo(record.id);
+            const record = await getRecord(order, row[1]);
+            const info = await getRecordInfo(record.base_bill_id);
 
             if (!fetchedData) return null;
 
@@ -34,12 +36,16 @@ export async function handleExport(visibleData) {
                 conversion = 1;
             } else if (row[10] === "KG" || row[10] === "KGM") {
                 conversion = parseFloat((parseFloat(row[16]) / parseFloat(row[4])).toFixed(8));
-            } else {
-                conversion = 0;
             }
 
             let PTPRECIO = (row[13]).replace(/[$,]/g, '');
-            console.log(info.trm)
+            let PTTASA_CAMBIO = row[11]; // Asegúrate de que este valor esté disponible
+
+            // Asegúrate de que PTPRECIO se calcule correctamente
+            PTPRECIO = (info.billed_currency === "USD" || info.billed_currency === "EUR") 
+                ? parseFloat(PTPRECIO) 
+                : parseFloat((PTPRECIO / PTTASA_CAMBIO).toFixed(9)); // Cambiar a PTTASA_CAMBIO
+
             return {
                 'CODSUBP': row[9],
                 'CODEMBALAJE': "PK",
@@ -48,7 +54,7 @@ export async function handleExport(visibleData) {
                 'NMBULTOS': parseFloat(row[18]) || 0,
                 'CODBANDERA': 169,
                 'CODPAIS_ORIGEN': 169,
-                'PTTASA_CAMBIO': info.trm,
+                'PTTASA_CAMBIO': PTTASA_CAMBIO || 0, // Asegúrate de que no sea nulo
                 'CODPAIS_COMPRA': 169,
                 'CODPAIS_DESTINO': 953,
                 'CODPAIS_PROCEDENCIA': 169,
@@ -58,7 +64,7 @@ export async function handleExport(visibleData) {
                 'OTROS_GASTOS': 0,
                 'CODITEM': row[2] || 'N/A',
                 'NMCANTIDAD': parseFloat(row[4]) || 0,
-                'PTPRECIO': info.conversion === 1 ? parseFloat(PTPRECIO) : parseFloat((PTPRECIO / row[11]).toFixed(9)),
+                'PTPRECIO': PTPRECIO || 0, // Asignar correctamente
                 'NMCONVERSION': conversion
             };
         });
@@ -102,13 +108,12 @@ export async function handleExport(visibleData) {
                     acc['NMCANTIDAD'] += parseFloat(item['NMCANTIDAD']) || 0;
                     return acc;
                 }, {
-                    
                     'CODSUBP': codsubp,
                     'CODEMBALAJE': "PK",
                     ...summedBySubpartida, 
                     'CODBANDERA': 169,
                     'CODPAIS_ORIGEN': 169,
-                    'PTTASA_CAMBIO': 0,
+                    'PTTASA_CAMBIO': items[0]['PTTASA_CAMBIO'], // Obtener el valor de PTTASA_CAMBIO
                     'CODPAIS_COMPRA': 169,
                     'CODPAIS_DESTINO': 953,
                     'CODPAIS_PROCEDENCIA': 169,
@@ -118,11 +123,10 @@ export async function handleExport(visibleData) {
                     'OTROS_GASTOS': 0,
                     'CODITEM': coditem,
                     'NMCANTIDAD': 0,
-                    'PTPRECIO': 0,
+                    'PTPRECIO': items[0]['PTPRECIO'], // Obtener el valor de PTPRECIO
                     'NMCONVERSION': 0
                 });
 
-                
                 const uniqueItems = items.filter((item, index, self) =>
                     index === self.findIndex((t) => (
                         t['PTPRECIO'] === item['PTPRECIO'] && t['NMCONVERSION'] === item['NMCONVERSION']
@@ -169,6 +173,7 @@ export async function handleExport(visibleData) {
         console.error('Error al generar el archivo CSV:', err);
     }
 }
+
 
 
 

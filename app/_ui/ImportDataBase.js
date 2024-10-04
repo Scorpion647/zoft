@@ -338,7 +338,6 @@ export const ImportDataBase = () => {
                 </List>
               )}
 
-              {/* Muestra el ID seleccionado solo para propósitos de depuración */}
               {selectedId !== null && <Box mt="2">ID seleccionado: {selectedId}</Box>}
             </FormControl>
             <FormControl isRequired mt={4}>
@@ -413,7 +412,7 @@ export const ImportDataBase = () => {
   }, []);
 
 
-
+ 
 
   const handleDownload = () => {
 
@@ -539,7 +538,8 @@ export const ImportDataBase = () => {
           const domainExists = await getSupplier("", "", supplier_name);
           if (domainExists.name !== supplier_name) {
             const newSupplier = await insertSupplier({ name: supplier_name });
-            supplierId = newSupplier.supplier_id;
+            const domain = await getSupplier("", "", supplier_name);
+            supplierId = domain.supplier_id;
           } else {
             supplierId = domainExists.supplier_id;
           }
@@ -561,14 +561,16 @@ export const ImportDataBase = () => {
           if (unitPriceParsed && !isNaN(unitPriceParsed)) {
             recordsToInsert.push({
               item: parseInt(position),
-              quantity: parseInt(String(quantity || 1).replace(/[.,]/g, '')),
+              approved_quantity: 0,
+              total_quantity: parseFloat(quantity),
+              pending_quantity: 0,
               material_code: String(material_code),
               purchase_order: String(purchase_order),
               measurement_unit: measurement_unit,
               unit_price: parseInt(unitPriceParsed) || 12345,
               currency: String(currency),
               created_at: new Date().toISOString(),
-              supplier_id: parseInt(supplierId) || 340,
+              supplier_id: parseInt(supplierId),
               description: String(description),
               net_price: parseInt(parseFloat((net_price * 100).toFixed(0))) || 12345,
             });
@@ -652,46 +654,21 @@ export const ImportDataBase = () => {
     ]);
 
 
-    if (invalidMaterialEntries.length > 0) {
+    /*if (invalidMaterialEntries.length > 0) {
       const groupedErrors = groupConsecutiveNumbers(invalidMaterialEntries);
       const errorMessage = `Material code not found at rows ${groupedErrors.join(', ')}`;
       toast({ title: 'Validation Errors', description: errorMessage, status: 'error', position: 'top', isClosable: true, duration: 10000 });
-    }
+    }*/
 
     setIsProcessing(false);
     toast({ title: "Formulario enviado", description: `El formulario del ${selectedTable} se ha enviado correctamente.`, status: "success", duration: 3000, isClosable: true });
   };
 
 
-  const groupConsecutiveNumbers = (arr) => {
-    const grouped = [];
-    let temp = [arr[0]];
-
-    for (let i = 1; i < arr.length; i++) {
-      if (arr[i] === arr[i - 1] + 1) {
-        temp.push(arr[i]);
-      } else {
-        grouped.push(temp);
-        temp = [arr[i]];
-      }
-    }
-    grouped.push(temp);
-
-    return grouped.map(group => (group.length > 1 ? `${group[0]}-${group[group.length - 1]}` : `${group[0]}`));
-  };
+ 
 
 
-  const getsuplier = async (record) => {
-    const supplier = await getSupplier(record)
-    const hola = null;
-    setData(supplier.map(supplier => [
-      { hola: supplier.supplier_id }
-    ]));
-
-    const [data1, setData1] = useState(Array(30).fill().map(() => Array(4).fill('')));
-    return hola;
-
-  }
+ 
 
 
 
@@ -701,7 +678,7 @@ export const ImportDataBase = () => {
     try {
       if (selectedTable === 'Registros') {
         const records = await getRecords(1, 200);
-
+        console.log(records)
         if (records) {
           const supplierIds = [...new Set(records.map(record => record.supplier_id))];
 
@@ -721,7 +698,7 @@ export const ImportDataBase = () => {
             record.item,
             record.material_code,
             record.description,
-            record.quantity,
+            record.total_quantity,
             record.measurement_unit,
             record.unit_price,
             record.net_price,
@@ -821,6 +798,19 @@ export const ImportDataBase = () => {
               <Icon as={AddIcon} w={5} h={5} color="black" />
             </Button>
           </Tooltip>
+          {(selectedTable === "Materiales") && (
+            <Tooltip label="Actualizar" fontSize="md">
+            <Button
+
+              colorScheme='teal'
+              backgroundColor='#F1D803'
+              onClick={onOpen}
+
+            >
+              <Icon as={AddIcon} w={5} h={5} color="black" />
+            </Button>
+          </Tooltip>
+          )}
           <VStack width="35%"></VStack>
           {Buttons && <Text>Preview</Text>}
           <Switch
