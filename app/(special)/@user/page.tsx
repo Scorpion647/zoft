@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { redirect, useRouter } from "next/navigation";
 import {
   Flex,
@@ -28,6 +28,7 @@ import {
 import { Associate_invoice } from "@/app/_ui/Associate_invoice";
 import { CreatelargeAdmin } from "@/app/_ui/Createstate";
 import { useSharedState } from "@/app/_ui/useSharedState";
+import { userData } from "@/app/_lib/database/currentUser";
 
 export default function Userpage() {
   const { state, updateState } = useSharedState();
@@ -35,6 +36,9 @@ export default function Userpage() {
   const [isinicio, setisinicio] = useState(false);
   const [State, setState] = useState(false);
   const [Add, setAdd] = useState(false);
+  const [name, setname] = useState("");
+  const [email, setemail] = useState("");
+  
 
   const handleLogout = async () => {
     try {
@@ -65,25 +69,27 @@ export default function Userpage() {
   const Asociar = () => {
     setisinicio(false);
   };
-  const Estado = () => {
-    router.push("/app/estado_factura");
-  };
+
 
   const router = useRouter();
 
   const [inputValue, setInputValue] = useState("");
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(event.target.value);
-  };
 
-  const handleClick = () => {
-    Asociar();
-  };
+  
+  useEffect(() => {
+    const Data = async () => {
+      const user = await userData()
+      setname(user?.data?.user?.identities?.[0].identity_data?.username)
+      setemail(String(user?.data?.user?.email))
+      
 
-  const HandleLogout = () => {
-    redirect("@/app/(auth)/logout/route");
-  };
+      
+      //console.log(user.data.user?.identities[0].identity_data.username)
+      //console.log(user.data.user?.identities[0].identity_data)
+    }
+    Data()
+  },[])
 
   return (
     <ChakraProvider>
@@ -111,7 +117,7 @@ export default function Userpage() {
                   </Menu>
                 </HStack>
                 <Text className="absolute top-14 " color="black">
-                  Juan Rios
+                  {name}
                 </Text>
                 <VStack marginTop="15%" align="stretch">
                   <Button
@@ -144,7 +150,8 @@ export default function Userpage() {
               {Add === true && (
                 <Associate_invoice
                   setisTable={setisinicio}
-                  isTable={isinicio}
+                  invoi={""}
+                  isTable={"Create"}
                   sharedState={state}
                   updateSharedState={updateState}
                 />

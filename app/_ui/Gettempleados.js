@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect } from "react";
 import { Spinner, Box, VStack, HStack, Text, Icon, Button } from "@chakra-ui/react";
 import { IoEllipsisVerticalSharp } from "react-icons/io5";

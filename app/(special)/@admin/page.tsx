@@ -1,6 +1,6 @@
 "use client";
 
-import { saveAppData } from "@/app/_lib/database/app_data";
+import { getData, saveAppData } from "@/app/_lib/database/app_data";
 import MainButton from "@/app/_ui/component_items/MainButton";
 import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
 import { CreatelargeAdmin } from "@/app/_ui/Createstate";
@@ -196,19 +196,50 @@ export default function Admin() {
     onClose: onCloseSecondModal,
   } = useDisclosure();
 
-  const [inputValue, setInputValue] = useState("");
+  const [InputUSD, setInputUSD] = useState("");
+  const [InputEUR, setInputEUR] = useState("");
   const [updatedValue, setUpdatedValue] = useState("");
 
   // Manejo del cambio en el input
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(event.target.value);
+  const handleInputChangeUSD = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputUSD(event.target.value);
+  };
+  const handleInputChangeEUR = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputEUR(event.target.value);
   };
 
   const handleApply = async () => {
- 
-    updateState("TRMNUM", inputValue);
+    const TRMUSD = JSON.parse(InputUSD);
+    const TRMEUR = JSON.parse(InputEUR);
+    console.log("USD:", TRMUSD)
+    console.log("EUR:", TRMEUR)
+
+    const USD = await saveAppData({value: TRMUSD, key: "trm_usd"});
+    console.log("Pasamos por aqui 1")
+    const EUR = await saveAppData({value: TRMEUR, key: "trm_eur"})
+    console.log("Pasamos por aqui 2")
     onCloseSecondModal();
   };
+
+  const bring_TRM = async () => {
+    try{
+      const USD = await getData("trm_usd")
+    const EUR = await getData("trm_eur")
+    if (USD[0].value !== null && USD[0].value !== undefined) {
+      setInputUSD(USD[0].value.toString()); // Convierte el número a cadena
+    } else {
+      setInputUSD("0"); // Asigna un valor por defecto si es null
+    }
+    if (EUR[0].value !== null && EUR[0].value !== undefined) {
+      setInputEUR(EUR[0].value.toString()); // Convierte el número a cadena
+    } else {
+      setInputEUR("0"); // Asigna un valor por defecto si es null
+    } 
+    } catch{
+
+    }   
+    onOpenSecondModal()
+  }
 
   return (
     <ChakraProvider>
@@ -220,26 +251,7 @@ export default function Admin() {
 
  
 
-      <Box
-        position="fixed" 
-        top="0px" 
-        left="5px" 
-        zIndex="9999" 
-      >
-        <HStack>
-        <Image
-          src="/grupo-ecopetrol.png" 
-          alt="Descripción de la imagen"
-          w="160px"
-          h="70px"
-
-        />
-        <VStack spacing={0} align="start" justify="start" textAlign="start">
-        <Text className=" font-sans" textColor="gray.200">REFINERIA</Text>
-        <Text className=" font-sans" textColor="gray.200">DE CARTAGENA</Text>
-        </VStack>
-        </HStack>
-      </Box>
+      
     </Box>
              
           {/* Caja Principal */}
@@ -266,7 +278,7 @@ export default function Admin() {
                         Colaboradores
                       </MenuItem>
                       <MenuItem
-                        onClick={onOpenSecondModal}
+                        onClick={bring_TRM}
                         icon={<EditIcon color="black" />}>
                         Actualizar TRM
                       </MenuItem>
@@ -284,6 +296,21 @@ export default function Admin() {
                 <Text fontSize="xl" fontWeight="bold">
                   Administrador
                 </Text>
+              </Box>
+              <Box position="absolute" left={4}>
+              <HStack>
+                <Image
+                  src="/grupo-ecopetrol.png" 
+                  alt="Descripción de la imagen"
+                  w="160px"
+                  h="70px"
+
+                />
+                <VStack spacing={0} align="start" justify="start" textAlign="start">
+                <Text className=" font-sans" textColor="black">REFINERIA</Text>
+                <Text className=" font-sans" textColor="black">DE CARTAGENA</Text>
+                </VStack>
+              </HStack>
               </Box>
             </Flex>
             <HStack height="100%" mt={3} spacing={2} align="stretch">
@@ -495,19 +522,27 @@ export default function Admin() {
                 <ModalHeader>Actualizar TRM</ModalHeader>
                 <ModalBody>
                   <FormControl>
-                    <FormLabel>TRM</FormLabel>
+                    <FormLabel>TRM USD (dolares)</FormLabel>
                     <Input
                       type="number"
-                      value={inputValue}
-                      onChange={handleInputChange}
+                      value={InputUSD}
+                      onChange={handleInputChangeUSD}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>TRM EUR (euros)</FormLabel>
+                    <Input
+                      type="number"
+                      value={InputEUR}
+                      onChange={handleInputChangeEUR}
                     />
                   </FormControl>
                 </ModalBody>
                 <ModalFooter>
-                  <Button colorScheme="blue" onClick={handleApply}>
+                  <Button colorScheme="teal" backgroundColor="#F1D803" textColor="black" onClick={handleApply}>
                     Aplicar
                   </Button>
-                  <Button variant="ghost" onClick={onCloseSecondModal} ml={3}>
+                  <Button  backgroundColor="red" textColor="white" onClick={onCloseSecondModal} ml={3}>
                     Cerrar
                   </Button>
                 </ModalFooter>

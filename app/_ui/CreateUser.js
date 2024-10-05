@@ -1,9 +1,10 @@
 
 'use client';
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Checkbox,ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
-import { SearchIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
+import { SearchIcon, CheckIcon, CloseIcon, AddIcon, ArrowForwardIcon, ArrowBackIcon } from "@chakra-ui/icons";
+import { getProfile, selectProfiles } from "../_lib/database/profiles";
 
 
 
@@ -12,9 +13,9 @@ import { SearchIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 
 
 const create = [
-    { id: 1, email: "jcastroc1@unicartagena.edu.co" },
-    { id: 2, email: "jhoyflow15@gmail.com" },
-    { id: 3, email: "jhoyflow@hotmail.com" },
+    { email: "jcastroc1@unicartagena.edu.co" },
+    { email: "jhoyflow15@gmail.com" },
+    { email: "jhoyflow@hotmail.com" },
     
 
 
@@ -28,11 +29,12 @@ export const CreateLargeUser = () => {
     const [inputValue, setInputValue] = useState('');
     const [filteredValue, setFilteredValue] = useState('');
     const [isAccept, setisAccept] = useState(false);
+    const [Profiles, setProfiles] = useState([]);
 
-    const filteredData = create.filter(item =>
-        item.email.startsWith(filteredValue)  
-    );
     
+    
+
+
     const handleFilterClick = () => {
         if (inputValue.trim() !== '') {
             setFilteredValue(inputValue.trim());
@@ -41,8 +43,36 @@ export const CreateLargeUser = () => {
         }
     };
     const router = useRouter();
+    
+    
+   const FetchData = async () => {
+    const data = []
+        try{
+        const Data = await selectProfiles({page: 1, limit: 10})
+        Data.map((prof) => {
+            if(prof.user_role === "guest"){
+                data.push({
+                    email: prof.email
+                })
+            }
+        })
+        setProfiles(data)
 
+        
+        }catch{
 
+        }finally{
+
+        }
+    }
+
+    useEffect(() => {
+        FetchData()
+    },[])
+
+    const filteredData = Profiles.filter(item =>
+        item.email.startsWith(filteredValue)  
+    );
      
 return(
     <>
@@ -54,7 +84,7 @@ return(
         </HStack>
         <VStack overflow="auto" w="100%" bgColor="gray.200" height="400" justify='flex-start' alignItems="flex-start">
             {filteredData.map ((item) => (
-                <VStack key={item.id} w="100%" h="50">
+                <VStack key={item.email} w="100%" h="50">
                     <Box whiteSpace="nowrap" paddingRight={2} paddingLeft={2}  justifyContent='center' alignItems="center" className="rounded-2xl" bg="gray.200" w="100%" h="50">
                         <HStack marginTop="1%" className="rounded-2xl" bgColor="white"  align="center" justify="center" w="100%" h="100%">
                             <HStack ml="3%" alignItems="center" justify="start" w="80%">
@@ -73,6 +103,27 @@ return(
                 </VStack> 
             ))}      
         </VStack>
+        <HStack width="100%" height="6%" bg="gray.200" justify="center">
+                        <Button
+                            width="1%"
+                            height="60%"
+                            bg="#F1D803"
+
+                            colorScheme="teal"
+                        >
+                            <ArrowBackIcon width={4} height={4} color="black" />
+                        </Button>
+                        <Text>1</Text>
+                        <Button
+                            width="1%"
+                            height="60%"
+                            bg="#F1D803"
+
+                            colorScheme="teal"
+                        >
+                            <ArrowForwardIcon width={4} height={4} color="black" />
+                        </Button>
+                    </HStack>
         {isAccept && (<div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-300">
             <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20 ">
               <h2 className="text-xl font-bold mb-4">Confirmacion de Autorizacion de Usuario</h2>

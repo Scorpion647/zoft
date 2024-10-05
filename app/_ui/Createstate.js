@@ -7,7 +7,7 @@ import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
 import { getInvoice, getlastmodified, getbase_bill } from '@/app/_lib/database/service';
-import { selectInvoice_data } from '@/app/_lib/database/invoice_data'
+import { selectInvoice_data, selectSingleInvoice } from '@/app/_lib/database/invoice_data'
 import { selectSingleSupplierData, selectSupplierData, selectSupplierDataByInvoiceID } from '@/app/_lib/database/supplier_data'
 import {selectSingleMaterial} from '@/app/_lib/database/materials'
 import { selectBills, selectSingleBill } from '@/app/_lib/database/base_bills'
@@ -72,7 +72,7 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   const [isTable, setisTable] = useState(false);
   const [IsLoading,setIsLoading] = useState(false)
   const [selectedSupplier2,setselectedSupplier2] = useState()
-  
+  const [Role,setRole] = useState("")
 
 
 
@@ -101,6 +101,8 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
     
     setIsLoading(true)
     try{
+      const role = await getRole()
+      setRole(role)
       const invoice = await selectInvoice_data({page: 1, limit: 12})
       console.log("invoice: ",invoice)
     let Data = []
@@ -110,17 +112,17 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
       invoice.map(async (invo) => {
         try{
           const data = await selectSupplierDataByInvoiceID(invo.invoice_id)
-          console.log("data: ",data[0])
+          console.log("data con []: ",data[0])
 
   
 
         let date =  formatDate(data[0].modified_at)
-        let estado = "pending"
-        if(invo.approved === false && invo.created_at === invo.updated_at){
+        let estado = ""
+        if(invo.state === "pending"){
           estado = "pending"
-        }else if(invo.approved === false && invo.created_at !== invo.updated_at){
+        }else if(invo.state === "rejected"){
           estado = "rejected"
-        }else if(invo.approved === true){
+        }else if(invo.state === "approved"){
           estado = "approved"
         }
         let hola = data[0].base_bill_id;
@@ -153,14 +155,42 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   }
   useEffect(() => {
    fetchData()
-  }, [isTable]);
+  }, [isTable, hola]);
 
   
-  
+const [Razon,setRazon] = useState(false)
+const [Type,setType] = useState("View")
+const [codigo,setcodigo] = useState("")
+const [conta,setconta] = useState(0)
+
+useEffect(() => {
+  if (codigo) {
+    if (Role === "administrator") {
+      setselectedSupplier2(codigo)
+      sethola(true)
+    } else if (Role === "employee") {
+      handleEmployeeActions(codigo)
+    }
+  }
+}, [codigo,conta])
+
+const handleEmployeeActions = async (e) => {
+  const invoice = await selectSingleInvoice(e)
+  if (invoice.state === "rejected") {
+    setRazon(true)
+    setType("Edit")
+  } else if (invoice.state === "pending") {
+    setType("View")
+    setisTable(true)
+  } else if (invoice.state === "approved") {
+    setType("View")
+    setisTable(true)
+  }
+}
 
 const ChangeReturn = (e) => {
-setselectedSupplier2(e)
-sethola(true)
+  setconta(conta + 1)
+  setcodigo(e)
 }
 
 const ChangeHola = (e) => {
@@ -215,7 +245,7 @@ const ChangeHola = (e) => {
                   <option value="RECHAZADO">Rechazados</option>
                 </Select>
                 {IsAdmin && (
-                  <Button mr="2" onClick={() => setisTable(true)} colorScheme='teal' backgroundColor='#F1D803'>
+                  <Button mr="2" onClick={() => (setisTable(true), setType("Create"), setcodigo(""))} colorScheme='teal' backgroundColor='#F1D803'>
                   <AddIcon w={5} h={5} color='black' />
                 </Button>
                 )}
@@ -293,11 +323,44 @@ const ChangeHola = (e) => {
                 )}
               </Box>
 
-              
-            </VStack>
-          ) : (
+              {Razon && (<div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-300">
+            <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20 ">
+              <h2 className="text-xl font-bold mb-4">Su Solicitud de asociacion a sido Rechazada</h2>
+
+              <VStack mb={4} textAlign='start' justifyContent="start" alignItems='start' mt={5} >
+              <Text>La razon del rechazo se debe a una inconsistencia en el apartado del numero de la factura y en el peso total ya que no estan acordes en ninguna factura existente</Text>
+              </VStack>
+              <p className="font-bold">Si desea editar la asociacion anterior haga click en Editar</p>
             
-            <Associate_invoice setisTable={setisTable} isTable={isTable}   sharedState={sharedState} updateSharedState={updateSharedState} />
+              <HStack mt={4} justify="center" align="center">
+                <Button bgColor="red.500" colorScheme="teal" className=" px-4 py-2 rounded" onClick={() => setRazon(false)}>
+                    Cerrar
+                </Button>
+                <Button textColor="black" bgColor="#F1D803" colorScheme="teal" className=" px-4 py-2 rounded" onClick={() => (setisTable(true), setRazon(false))}>
+                    Editar
+                </Button>
+              </HStack>
+            </div>
+          </div>)}
+            </VStack>
+
+          
+          ) : (
+            <>
+            
+              {(Type === "Create") && (
+              <Associate_invoice setisTable={setisTable} isTable={Type} invoi={codigo}  sharedState={sharedState} updateSharedState={updateSharedState} />
+            )}
+            
+            {(Type === "Edit" || Type === "View") && (
+              <div
+              className={` absolute p-4 bg-gray-100 border border-gray-300 text-center h-[100%] w-[100%] justify-center self-center content-center bottom-1 snap-center origin-center  rounded-3xl shadow-md flex flex-col`}>
+              <Associate_invoice setisTable={setisTable} isTable={Type} invoi={codigo}  sharedState={sharedState} updateSharedState={updateSharedState} />
+              </div>
+            )}
+            </>
+            
+            
             
 
 

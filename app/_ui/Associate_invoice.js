@@ -1,18 +1,22 @@
 'use client'
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Radio,RadioGroup,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,Alert, Switch, Tooltip,  Box, VStack, HStack,  Button, Text, Input, useDisclosure } from "@chakra-ui/react";
-import { SearchIcon, ArrowBackIcon } from "@chakra-ui/icons";
+import { Radio,RadioGroup,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,Alert, Switch, Tooltip,  Box, VStack, HStack,  Button, Text, Input, useDisclosure, Icon } from "@chakra-ui/react";
+import { SearchIcon, ArrowBackIcon, EditIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
-import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo } from '@/app/_lib/database/service';
+import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo, getSuplierInvoice } from '@/app/_lib/database/service';
 import debounce from "lodash/debounce"; 
-import { insertSupplierData, selectSingleSupplierData, selectSupplierData } from "../_lib/database/supplier_data";
+import { insertSupplierData, selectSingleSupplierData, selectSupplierData, selectSupplierDataByInvoiceID, updateSupplierData } from "../_lib/database/supplier_data";
 import { getRole } from "../_lib/supabase/client";
 import {userData} from "@/app/_lib/database/currentUser"
 import { selectSingleSupplier } from "../_lib/database/suppliers";
 import { selectSingleSupplierEmployee } from "../_lib/database/supplier_employee";
+import { getData } from "../_lib/database/app_data";
+import { selectBills, selectByPurchaseOrder, selectSingleBill } from "../_lib/database/base_bills";
+import { selectSingleInvoice, updateInvoice } from "../_lib/database/invoice_data";
+
 
 
 
@@ -25,26 +29,173 @@ function formatMoney(amount) {
   });
 }
 
-export const Associate_invoice = ({ setisTable, isTable, sharedState, updateSharedState }) => {
+export const Associate_invoice = ({ setisTable, isTable, sharedState, updateSharedState, invoi }) => {
   const [Curren, setCurren] = useState(false)
+  const [Table, setTable] = useState("Associate")
+  const [isActive, setisActive] = useState(false)
+  const [isButton, setButton] = useState(false)
+  const [orderNumber, setOrderNumber] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [remainingCount, setRemainingCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const buttonRef = useRef(null);
+  const [hola, sethola] = useState(false);
+  const hotTableRef = useRef(null);
+  const [factunitprice, setfactunitprice] = useState(0);
+  const [facttotalvalue, setfacttotalvalue] = useState(0);
 
+  
+  const [position, setposition] = useState(0);
+  const router = useRouter();
+  const [lastClickTime, setLastClickTime] = useState(0);
+  const [columnSum2, setColumnSum2] = useState(0);
 
+  const [selectedCurrency, setSelectedCurrency] = useState('USD'); 
 
 
 
   const [data, setData] = useState(Array(100).fill().map(() => Array(6).fill('')));
 
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const pruebas = async () => {
+    let tfactura = 0;
+    try {
+        const invoice = await selectSingleInvoice(invoi);
+        if(isTable === "View"){
+          if(invoice.state === "approved"){
+            setisActive(false)
+            setButton(false)
+          }else{
+            setisActive(false)
+            setButton(true)
+          }
+        }else{
+          setisActive(true)
+      setButton(false)
+        }
+        
+        
+        const Data = await getSuplierInvoice(1, 200, invoi);
+        console.log(Data);
+
+        let total = 0;
+        let bultos = 0;
+        let purchase = "";
+        let proveedor = "";
+        let cont = 0;
+
+        const hot = hotTableRef.current.hotInstance; // Asegúrate de tener la referencia correcta
+        const changes = []; // Array para almacenar los cambios en la tabla
+
+        await Promise.all(
+            Data.map(async (datas) => {
+                try {
+                    if (datas && datas.base_bill_id) {
+                        const bill = await selectBills({ page: 1, limit: 1, search: datas.base_bill_id });
+
+                        // Verifica si el dato existe antes de actualizar el estado
+                        if (purchase === "") {
+                            purchase = bill[0].purchase_order;
+                            const pro = await selectSingleSupplier(bill[0].supplier_id);
+                            proveedor = pro.name;
+                            if (datas.billed_unit_price !== bill[0].unit_price) {
+                                updateSharedState('TRM', false);
+                                updateSharedState('TRMCOP', datas.trm);
+                            } else {
+                                updateSharedState('TRM', true);
+                                updateSharedState('TRMCOP', 0);
+                            }
+                        }
+                        updateSharedState('nofactura', datas.bill_number);
+                        if (datas.gross_weight) {
+                            total += datas.gross_weight;
+                        }
+                        if (datas.packages) {
+                            bultos += datas.packages;
+                        }
+                        if (bill[0].item) {
+                            // Guarda los cambios como una fila entera
+                            changes.push([cont, 0, bill[0].item]); // Guarda el item en la columna 0
+                        }
+                        if (datas.billed_quantity) {
+                          // Guarda los cambios como una fila entera
+                          changes.push([cont, 2, datas.billed_quantity]); // Guarda el item en la columna 0
+                      }
+
+                        cont++;
+                    } else {
+                        console.warn('Datos incompletos en: ', datas);
+                    }
+                } catch (err) {
+                    console.error('Error fetching bill for base_bill_id:', datas.base_bill_id, err);
+                }
+            })
+        );
 
 
+        updateSharedState('pesototal', parseFloat(total.toFixed(2)));
+        updateSharedState('bultos', parseFloat(bultos.toFixed(0)));
+        updateSharedState('proveedor', proveedor);
+        setOrderNumber(purchase);
+        
+
+        if (changes.length > 0) {
+            console.log("Aplicando cambios de una vez en la tabla..."); // Para depuración
+            hot.batch(() => {
+
+                hot.setDataAtCell(changes);
+            });
+        } else {
+            console.log("No hay cambios para aplicar.");
+        }
+
+    } catch (error) {
+        console.error('Error in pruebas function:', error);
+    }finally{
+
+    }
+};
+
+
+
+
+
+  
   useEffect(() => {
-    updateSharedState('proveedor', "")
-    updateSharedState('descripcion', "NaN")
-    updateSharedState('cantidadoc', 0)
-    updateSharedState('pesopor', 0)
-    updateSharedState('totalfactura', 0)
-    updateSharedState('TRM', false)
-    updateSharedState('pesototal', 0)
-    updateSharedState('TRMCOP', 0)
+    const config = async () =>{
+      if(isTable === "Create"){
+        updateSharedState('nofactura', "");
+        updateSharedState('proveedor', "")
+      updateSharedState('descripcion', "NaN")
+      updateSharedState('cantidadoc', 0)
+      updateSharedState('pesopor', 0)
+      updateSharedState('totalfactura', 0)
+      updateSharedState('TRM', false)
+      updateSharedState('bultos', );
+      updateSharedState('pesototal', )
+      updateSharedState('TRMCOP', )
+      setisActive(true)
+      setButton(false)
+      onOpen()
+      }else{
+        updateSharedState('proveedor', "")
+      updateSharedState('descripcion', "NaN")
+      updateSharedState('cantidadoc', 0)
+      updateSharedState('pesopor', 0)
+      updateSharedState('totalfactura', 0)
+      updateSharedState('TRM', false)
+      updateSharedState('pesototal', 0)
+      updateSharedState('TRMCOP', 0)
+      
+        pruebas()
+        
+
+      
+      }
+    }
+    config()
   }, [])
 
 
@@ -54,19 +205,6 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
 
 
-
-
-
-  const [hola, sethola] = useState(false);
-  const hotTableRef = useRef(null);
-  const [factunitprice, setfactunitprice] = useState(0);
-  const [facttotalvalue, setfacttotalvalue] = useState(0);
-
-  const [orderNumber, setOrderNumber] = useState('');
-  const [position, setposition] = useState(0);
-  const router = useRouter();
-  const [lastClickTime, setLastClickTime] = useState(0);
-  const [columnSum2, setColumnSum2] = useState(0);
 
 
 
@@ -80,25 +218,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     return parseFloat(str);
   }
 
-  const convertToNumber = (value) => {
-    if (typeof value === 'string') {
-      value = value.replace(/,/g, '.');
-    }
-    return parseFloat(value);
-  };
 
-  function cleanAndFormatNumber(value) {
-
-    let cleanedValue = value.replace('$', '');
-
-
-    cleanedValue = cleanedValue.replace(/\./g, '');
-
-
-    cleanedValue = cleanedValue.replace(',', '.');
-
-    return cleanedValue;
-  }
 
 
 
@@ -182,26 +302,24 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
 
 
-  const [suggestions, setSuggestions] = useState([]);
-  const [remainingCount, setRemainingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const buttonRef = useRef(null);
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [selectedCurrency, setSelectedCurrency] = useState('USD'); 
-
-  useEffect(() => {
+  /*useEffect(() => {
     
     onOpen();
-  }, [onOpen]);
+  }, [onOpen]);*/
 
   const handleAccept = () => {
     
     console.log(`Moneda seleccionada: ${selectedCurrency}`);
-    if(selectedCurrency === "USD"){
+    if(selectedCurrency === "USD" || selectedCurrency === "EUR"){
+      if(selectedCurrency === "USD"){
+        setSelectedCurrency("USD")
+      }else{
+        setSelectedCurrency("EUR")
+      }
       updateSharedState('TRM', true)
     }else{
+      setSelectedCurrency("USD")
       updateSharedState('TRM', false)
     }
     onClose();
@@ -242,7 +360,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
 
   };
-
+  const toggleActive = () => {
+    setisActive(prevState => !prevState); // Cambia entre true y false
+  };
 
 
 
@@ -396,7 +516,6 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
       const pos = row[0];
 
       if (!orderNumber || pos === null || pos === undefined || pos === "" || isNaN(pos)) {
-        console.warn("Parámetros inválidos:", { orderNumber, pos });
         continue;
       }
 
@@ -409,9 +528,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
           if (row[0]) {
             if (hola === Number(row[0])) {
-              const { material_code, unit_price, quantity } = records;
+              const { material_code, unit_price, total_quantity } = records;
 
-              if (quantity > 0) {
+              if (total_quantity > 0) {
                 const materialDetails = await getMaterial(material_code);
                 const subheading = materialDetails?.subheading || "";
 
@@ -423,12 +542,12 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
  
                 if (sharedState.TRM) {
                   console.log("Entramos en true");
-                  changes.push([rowIndex, 3, String(unit_price/100)]);
-                  changes.push([rowIndex, 4, String((unit_price/100)* data[rowIndex][2])]);
+                    changes.push([rowIndex, 3, String(formatMoney(unit_price/100))]);
+                    changes.push([rowIndex, 4, String(formatMoney((unit_price/100)* data[rowIndex][2]))]);
                 } else if (!sharedState.TRM && parseFloat(sharedState.TRMCOP) !== 0) {
                   console.log("Entramos en false", unit_price);
-                  changes.push([rowIndex, 3, String(parseFloat((unit_price/100) * sharedState.TRMCOP))]);
-                  changes.push([rowIndex, 4, String((parseFloat((unit_price/100) * sharedState.TRMCOP))* data[rowIndex][2])]);
+                  changes.push([rowIndex, 3, String(formatMoney((unit_price/100) * sharedState.TRMCOP))]);
+                  changes.push([rowIndex, 4, String((formatMoney((((unit_price/100) * sharedState.TRMCOP* data[rowIndex][2])))))]);
                 } else {
                   console.log("No entramos en ninguno");
                   changes.push([rowIndex, 3, ""]);
@@ -496,7 +615,170 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
 
 
+const UpdateData = async () => {
+  const userConfirmed = window.confirm('Estimado usuario, compare que el subtotal de su factura concuerde con el subtotal registrado en el sistema.\n \n ¿Estás seguro de que deseas realizar la siguiente asociación de factura?');
+  
+    if (!userConfirmed) {
+      return;
+    }
+  
+    const hotInstance = hotTableRef.current?.hotInstance;
+    if (!hotInstance) {
+      console.error('Handsontable instance has been destruido o no está disponible.');
+      return;
+    }
+  
+    if (!sharedState.pesototal || !sharedState.bultos || !sharedState.nofactura || (!sharedState.TRM && (!sharedState.TRMCOP || sharedState.TRMCOP <= 0))) {
+      window.alert('Error, debe llenar todos los campos requeridos.');
+      return;
+    }
+  
+    const tableData = hotInstance.getData();
+    const records = [];
+    const update = [];
+    const seenPositions = new Set();
+    const duplicatePositions = new Map();
+    const incompleteRows = [];
+    let id = invoi;
+    let suname = "";
+    let email = "";
+    let hasCompleteRow = false;
+  
+    for (const [index, row] of tableData.entries()) {
+      const isEmptyRow = row.every(cell => cell === null || cell === '' || cell === undefined);
+      if (isEmptyRow) continue;
+  
+      const [record_position, material_code, billed_quantity, bill_number, , subheading] = row;
+  
+      if (record_position && material_code && bill_number && billed_quantity && subheading) {
+        const prue = await checkSubheadingExists(subheading);
+        if (String(subheading) !== "**********" && (String(subheading).length !== 10 || prue !== true)) {
+          incompleteRows.push(index + 1);
+          continue;
+        }
+  
+        hasCompleteRow = true;
+        const pos = hotInstance.getDataAtCell(index, 0);
+        const matchedRecord = await getRecord(orderNumber, pos);
+  
+        if (!matchedRecord) {
+          console.error(`No se encontró el registro para la posición ${pos}`);
+          continue;
+        }
+  
+        const { base_bill_id, unit_price, material_code, total_quantity, supplier_id, } = matchedRecord;
+  
+          
+          if(id === undefined || id === null){
+            const role = await getRole()
+            const user = await userData()
+            email = user.data.user.email
+            const sup = await selectSingleSupplier(supplier_id)
+            suname = sup.name
+            const newInvoice = await insertInvoice({ supplier_id: supplier_id, state: "pending" });
+            console.log("se creooooo: ",newInvoice)
+            id = newInvoice ;
+          }
 
+        if (subheading !== "**********") {
+          const valida = await getMaterial(material_code);
+          if (valida.material_code) {
+            await updateMaterial({material_code: material_code, subheading: subheading });
+          } else {
+            await insertMaterial({ material_code: material_code, subheading: subheading });
+          }
+        }
+  
+        const factunitprice = parseFloat(String(hotInstance.getDataAtCell(index, 3)).replace(/[$,]/g, ''));
+        const totalprice = (factunitprice * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
+        const gross = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.pesototal))).toFixed(9);
+        const packag = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.bultos))).toFixed(9);
+        let conver = 0
+        let trm = 0
+
+        if (sharedState.TRM) {
+          trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
+          conver = selectedCurrency === "USD" ? "USD" : "EUR";
+        } else {
+          trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
+          conver = "COP";
+        }
+
+        if (seenPositions.has(record_position)) {
+          if (!duplicatePositions.has(record_position)) {
+            duplicatePositions.set(record_position, []);
+          }
+          duplicatePositions.get(record_position).push(index + 1);
+        } else {
+          seenPositions.add(record_position);
+
+          const bill = await selectBills({limit: 1, page: 1, search: base_bill_id})
+
+          const record = {
+            base_bill_id: base_bill_id,
+            bill_number: String(sharedState.nofactura),
+            trm: parseFloat(trm),
+            billed_quantity: parseInt(billed_quantity),
+            billed_unit_price: parseInt(factunitprice * 100),
+            billed_total_price: parseInt(totalprice * 100),
+            gross_weight: parseFloat(gross),
+            packages: parseFloat(packag),
+            billed_currency: conver,
+            invoice_id: id
+          };
+          if(bill[0]){
+            update.push(record)
+          }else{
+            records.push(record);
+          }
+          
+        }
+      } else {
+        incompleteRows.push(index + 1);
+      }
+    }
+  
+    if (incompleteRows.length > 0) {
+      alert(`ERROR: revise las siguientes filas: ${incompleteRows.join(', ')}`);
+      return;
+    }
+  
+    if (!hasCompleteRow) {
+      alert('Debe haber al menos una fila completa.');
+      return;
+    }
+  
+    if (duplicatePositions.size > 0) {
+      const duplicatesMsg = Array.from(duplicatePositions.entries())
+        .map(([pos, indices]) => `Posición ${pos}: Fila(s) ${indices.join(', ')}`)
+        .join('\n');
+      alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
+      return;
+    }
+
+    try {
+        console.log("Records: ", records)
+        console.log("Update: ", update)
+        if(records){
+          await insertSupplierData(records);
+        }
+        if(update){
+          await updateSupplierData(update)
+        }
+        await updateInvoice({invoice_id: invoi, state: "pending"})
+      alert('Registros enviados correctamente.');
+      setisTable(false);
+    } catch (error) {
+      console.error('Error completo:', error);
+      if (error.message) {
+        console.error('Mensaje de error:', error.message);
+      }
+      if (error.details) {
+        console.error('Detalles del error:', error.details);
+      }
+      alert('Error al enviar los registros.');
+    }
+}
 
 
 
@@ -510,12 +792,12 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
 
   const columns = [
-    { data: 0, readOnly: false, title: 'Posicion' },
+    { data: 0, readOnly: (!isActive ? true : false ), title: 'Posicion' },
     { data: 1, readOnly: true, title: 'Codigo de Material' },
-    { data: 2, readOnly: false, title: 'Cantidad' },
+    { data: 2, readOnly: (!isActive ? true : false ), title: 'Cantidad' },
     { data: 3, readOnly: true, title: 'Precio Unitario' },
     { data: 4, readOnly: true, title: 'Valor Neto' },
-    { data: 5, readOnly: false, title: 'Subpartida ' },
+    { data: 5, readOnly: (!isActive ? true : false ), title: 'Subpartida ' },
   ];
 
   const handleCellDoubleClick = async (event, coords, TD) => {
@@ -531,13 +813,13 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     const matchedRecord = records
 
     if ((records.item !== 0 && records.item !== "" && records.item !== null && records.item !== undefined && records.item !== NaN) && (pos !== 0 && pos !== "" && pos !== undefined && pos !== NaN && pos !== null)) {
-      const { material_code, currency, description, supplier_id, quantity } = matchedRecord;
+      const { material_code, currency, description, supplier_id, total_quantity } = matchedRecord;
       const unit_price = convertCommaToDot(data[coords.row]?.[3]?.toString().trim());
       const supplier = await getSupplier(supplier_id);
 
       updateSharedState('descripcion', description);
       updateSharedState('proveedor', supplier.name);
-      updateSharedState('cantidadoc', quantity);
+      updateSharedState('cantidadoc', total_quantity);
       updateSharedState('preciouni', unit_price);
       updateSharedState('moneda', currency);
 
@@ -572,7 +854,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     }
 
     const totalSum = data.reduce((sum, row) => {
-      const unip = parseFloat(row[3]) || 0;
+      const unip = parseFloat(String(row[3]).replace(/[$,]/g, '')) || 0;
       const can = parseFloat(row[2]) || 0;
       return unip > 0 && can > 0 ? sum + (unip * can) : sum;
     }, 0);
@@ -591,7 +873,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
     debounceTimeoutRef2.current = setTimeout(() => {
       const totalSum = data.reduce((sum, row) => {
-        const unip = parseFloat(row[3]) || 0;
+        const unip = parseFloat(String(row[3]).replace(/[$,]/g, '')) || 0;
         const can = parseFloat(row[2]) || 0;
         return unip > 0 && can > 0 ? sum + (unip * can) : sum;
       }, 0);
@@ -627,9 +909,22 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   };
 
 
-  //¿Estás seguro de que deseas realizar la siguiente asociacion de factura?
-  //Estimado usuario compare que el subtotal de su factura concuerde con el subtotal registrado en el sistema
+
   const [Invoice,setInvoice] = useState()
+
+
+  async function getExchangeRate(currency) {
+    try {
+      const data = await getData(currency);
+      if (data[0].value !== null && data[0].value !== undefined) {
+        return data[0].value.toString(); 
+      }
+    } catch {
+     
+    }
+    return "0"; 
+  }
+
 
  
   const handleSubmit = async () => {
@@ -657,8 +952,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     const seenPositions = new Set();
     const duplicatePositions = new Map();
     const incompleteRows = [];
-    let id = 0;
-    let supplier_employee = ""
+    let id;
     let suname = "";
     let email = "";
     let hasCompleteRow = false;
@@ -685,30 +979,20 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           continue;
         }
   
-        const { base_bill_id, unit_price, material_code, quantity, supplier_id, } = matchedRecord;
+        const { base_bill_id, unit_price, material_code, total_quantity, supplier_id, } = matchedRecord;
   
-        /*if (id === undefined || id === null) {
-          const newInvoice = await insertInvoice({ supplier_id: supplier_id, approved: false });
-          id = newInvoice;
-        }*/
-
-          const role = await getRole()
           
-          if(role === "employee" && email === ""){
+          if(id === undefined || id === null){
+            const role = await getRole()
             const user = await userData()
-            console.log(user)
-            const suid = await selectSingleSupplierEmployee(user.data.user.id)
-            supplier_employee = suid.supplier_employee_id
             email = user.data.user.email
             const sup = await selectSingleSupplier(supplier_id)
             suname = sup.name
+            const newInvoice = await insertInvoice({ supplier_id: supplier_id, state: "pending" });
+            console.log("se creooooo: ",newInvoice)
+            id = newInvoice ;
           }
-          if ((id === undefined || id === null || id === 0) && role === "administrator") {
-            
-            let newInvoice = supplier_id;
-            id = newInvoice;
-            console.log(id)
-          }
+
         if (subheading !== "**********") {
           const valida = await getMaterial(material_code);
           if (valida.material_code) {
@@ -718,12 +1002,21 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           }
         }
   
-        const factunitprice = parseFloat(hotInstance.getDataAtCell(index, 3));
+        const factunitprice = parseFloat(String(hotInstance.getDataAtCell(index, 3)).replace(/[$,]/g, ''));
         const totalprice = (factunitprice * parseFloat(hotInstance.getDataAtCell(index, 2))).toFixed(2);
         const gross = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.pesototal))).toFixed(9);
         const packag = ((((hotInstance.getDataAtCell(index, 2) / sharedState.columnSum) * sharedState.bultos))).toFixed(9);
-        const conver = sharedState.TRM ? 1 : 0;
-  
+        let conver = 0
+        let trm = 0
+
+        if (sharedState.TRM) {
+          trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
+          conver = selectedCurrency === "USD" ? "USD" : "EUR";
+        } else {
+          trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
+          conver = "COP";
+        }
+
         if (seenPositions.has(record_position)) {
           if (!duplicatePositions.has(record_position)) {
             duplicatePositions.set(record_position, []);
@@ -731,26 +1024,27 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           duplicatePositions.get(record_position).push(index + 1);
         } else {
           seenPositions.add(record_position);
-          if(role === "employee") console.log(supplier_employee)
+
+
           const record = {
             base_bill_id: base_bill_id,
             bill_number: String(sharedState.nofactura),
-            trm: parseFloat(sharedState.TRMNUM),
+            trm: parseFloat(trm),
             billed_quantity: parseInt(billed_quantity),
             billed_unit_price: parseInt(factunitprice * 100),
             billed_total_price: parseInt(totalprice * 100),
             gross_weight: parseFloat(gross),
             packages: parseFloat(packag),
-            conversion_value: Number(conver),
-            ...(role === "employee" ? { supplier_employee_id: supplier_employee } : {}),
+            billed_currency: conver,
+            invoice_id: id
           };
           
-  
+
           records.push(record);
   
           const purchase_order = orderNumber;
           const item = pos;
-          const new_data = { quantity: quantity - billed_quantity };
+          const new_data = { pendong_quantity: total_quantity - billed_quantity };
   
           update.push({ purchase_order, item, new_data });
         }
@@ -776,21 +1070,19 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
       alert(`Hay posiciones duplicadas:\n${duplicatesMsg}`);
       return;
     }
-  
+
     try {
       console.log("Este es el Id:", id)
-      console.log(records)
-      if (id !== 0) {
-        await insertSupplierData(records, id);   
-      } else {
-        await insertSupplierData(records);     
+      console.log("Entramos aqui",records)
+        await insertSupplierData(records);
         const date = transformDateTime(new Date())
-        const info = await selectSupplierData({page: 1, limit: 1, search: sharedState.nofactura})
-        await sendEmail(email,orderNumber,sharedState.nofactura,date,suname,info[0].invoice_id)     
-      }
-      await insertSupplierData(records,id);
+        console.log(orderNumber,sharedState.nofactura,date,suname,id)
+        //await sendEmail()
+        //await sendEmail("jhoyflow15@gmail.com",orderNumber,sharedState.nofactura,date,suname,id)     
+      
+        sendEmail();
       alert('Registros enviados correctamente.');
-      setisTable(false);
+      //setisTable(false);
     } catch (error) {
       console.error('Error completo:', error);
       if (error.message) {
@@ -833,35 +1125,54 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   
 
 
-  const sendEmail = async (email,purchase,bill,date,name,invoice) => {
-    const dataToSend = {
-      email: email,
-      purchase_order: purchase,
-      bill: bill,
-      date: date,
-      supplier_name: name,
-      invoice_id: invoice,
-    };
+
+
+  const sendEmail = async () => {
+    document.getElementById("sendEmailButton").addEventListener("click", async () => {
+      // Example data to send in the POST request
+      const data = {
+        email: "recipient@example.com",
+        purchase_order: "PO123456",
+        bill: "BILL987654",
+        date: "2024-10-03",
+        supplier_name: "Supplier XYZ",
+        invoice_id: "INV20231003",
+        type: "Invoice",
+        reason: "Service Charges",
+        body: "This is a detailed description of the charges.",
+        subject: "Invoice for Services"
+      };
   
-    try {
-      const response = await fetch('/api/mail/new-supplier-data', {  
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
+      try {
+        const response = await fetch("/api/email/invoice", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data), // Send the data as JSON
+        });
   
-      if (!response.ok) {
-        throw new Error('Failed to send email');
+        if (response.ok) {
+          const result = await response.json();
+          console.log("Email sent successfully:", result);
+        } else {
+          const errorResult = await response.json();
+          console.error("Error sending email:", errorResult);
+        }
+      } catch (error) {
+        console.error("Network error occurred while sending email:", error);
       }
+    });
   
-      const result = await response.json();
-      console.log('Email sent successfully:', result);
-    } catch (error) {
-      console.error('Error sending email:', error);
-    }
   };
+  
+  
+  
+  
+
+
+
+
 
 
   const [subheadingValidity, setSubheadingValidity] = useState(new Map());
@@ -881,12 +1192,21 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             <Button onClick={() => setisTable(false)} width="30%" height="100%" colorScheme='teal' backgroundColor='#F1D803'>
               <ArrowBackIcon w={3} h={3} color='black' />
             </Button>
-
+            {isButton && (
+              <Tooltip label="Habilitar Edicion" fontSize="md">
+                <Button onClick={toggleActive} width="30%" height="100%" colorScheme='teal' backgroundColor='#F1D803'>
+              <Icon as={EditIcon} w={3} h={3} color="black" />
+              </Button>
+              </Tooltip>
+            )}
+          
           </HStack>
+          
           <HStack>
             <Input
               border='1px'
               backgroundColor='white'
+              isDisabled={!isActive}
               type="text"
               value={orderNumber}
               onChange={handleOrderNumberChange}
@@ -916,11 +1236,17 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             <HStack>
               <Text className=" font-semibold" fontSize="70%">COP</Text>
               <Switch
-
+                isDisabled={!isActive}
                 isChecked={sharedState.TRM}
                 onChange={handleSwitchChange}
               ></Switch>
-              <Text className=" font-semibold" fontSize="70%">USD</Text>
+              <Text className="font-semibold" fontSize="70%">
+  {selectedCurrency === 'USD' 
+    ? 'USD' 
+    : selectedCurrency === 'EUR' 
+      ? 'EUR' 
+      : 'USD'}
+</Text>
             </HStack>
 
           </HStack>
@@ -948,7 +1274,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             {!sharedState.TRM && (
               <HStack mr="20px" top={4} height="30px" width="300px" position="absolute">
                 <Text fontSize="70%">TRM Factura</Text>
-                <Input type="number" min="1" step="0.0000000001" onBlur={handleTRMCOP} h="25px" width="190px" bg="white"></Input>
+                <Input isDisabled={!isActive} type="number" min="1" step="0.0000000001" value={(isTable !== "Create") ? sharedState.TRMCOP : undefined} onBlur={handleTRMCOP} h="25px" width="190px" bg="white"></Input>
               </HStack>
             )}
           </VStack>
@@ -961,16 +1287,16 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
           <HStack align="center" justify="center" height="20%" >
             <VStack width="50%" align="start" justify="start"><Text fontSize="80%" className=" font-semibold">Peso Total</Text></VStack>
-            <VStack width="50%" align="end" justify="end"><Input fontSize="80%" width="100%" height="20%" type="number" min="1" step="0.01" onChange={handlepesototal} backgroundColor='white' border='1px' /></VStack>
+            <VStack width="50%" align="end" justify="end"><Input isDisabled={!isActive} fontSize="80%" width="100%" height="20%" type="number" min="1" step="0.01" onChange={handlepesototal} value={(isTable !== "Create") ? sharedState.pesototal : undefined} backgroundColor='white' border='1px' /></VStack>
 
           </HStack>
           <HStack align="center" justify="center" height="20%" >
             <VStack width="50%" align="start" justify="start"><Text fontSize="80%" type="numeric" className=" font-semibold">Bultos</Text></VStack>
-            <VStack width="50%" align="end" justify="end"><Input fontSize="80%" width="100%" height="20%" type="number" min="1" step="1" onChange={handlebulto} backgroundColor='white' border='1px' /></VStack>
+            <VStack width="50%" align="end" justify="end"><Input isDisabled={!isActive} fontSize="80%" width="100%" height="20%" type="number" min="1" step="1" onChange={handlebulto} value={(isTable !== "Create") ? sharedState.bultos : undefined} backgroundColor='white' border='1px' /></VStack>
           </HStack>
           <HStack align="center" justify="center" height="20%" >
             <VStack width="50%" align="start" justify="start"><Text fontSize="80%" className=" font-semibold">No. Factura</Text></VStack>
-            <VStack width="50%" align="end" justify="end"><Input fontSize="80%" width="100%" height="20%" onChange={handleNoFactura} backgroundColor='white' border='1px' /></VStack>
+            <VStack width="50%" align="end" justify="end"><Input isDisabled={!isActive} fontSize="80%" width="100%" height="20%" onChange={handleNoFactura} value={(isTable !== "Create") ? sharedState.nofactura : undefined} backgroundColor='white' border='1px' /></VStack>
           </HStack>
 
 
@@ -996,8 +1322,16 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             <RadioGroup mb="10px" defaultValue="USD" colorScheme="yellow" onChange={setSelectedCurrency} value={selectedCurrency}>
               <Radio mr="10px" value="USD">Dólares (USD)</Radio>
               <Radio value="COP">Pesos (COP)</Radio>
+              <Radio ml="10px" value="EUR">Euros (EUR)</Radio>
             </RadioGroup>
-            <p className=" font-bold">Moneda seleccionada: {selectedCurrency === 'USD' ? 'Dólares (USD)' : 'Pesos (COP)'}</p>
+            <p className="font-bold">
+  Moneda seleccionada: 
+  {selectedCurrency === 'USD' 
+    ? ' Dólares (USD)' 
+    : selectedCurrency === 'EUR' 
+      ? ' Euros (EUR)' 
+      : ' Pesos (COP)'}
+</p>
           </ModalBody>
           <ModalFooter>
             <Button colorScheme='teal' backgroundColor='#F1D803' textColor="black" onClick={handleAccept}>Aceptar</Button>
@@ -1280,17 +1614,16 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                   const value1 = parseFloat(hot.getDataAtCell(rowIndex, 0));
                   const record = await getRecord(orderNumber, value1);
 
-                  if (valueX > parseFloat(record.quantity) || valueX < 1) {
+                  if (valueX > parseFloat(record.total_quantity) || valueX < 1) {
                     batchChanges.push([rowIndex, colIndex, ""]);
                   }
                 }
 
-                if ((colIndex === 2 || colIndex === 3) &&
-                  data[rowIndex][0] && !isNaN(data[rowIndex][0]) &&
-                  data[rowIndex][3] && !isNaN(data[rowIndex][3])) {
+                if ((colIndex === 2 || colIndex === 3)) {
 
-                  const result = data[rowIndex][2] * data[rowIndex][3];
-                  batchChanges.push([rowIndex, 4, formatMoney(parseFloat(result).toFixed(2))]);
+                  const result = data[rowIndex][2] * parseFloat(String(data[rowIndex][3]).replace(/[$,]/g, ''));
+
+                  batchChanges.push([rowIndex, 4,  String(formatMoney(result))]);
                 }
 
                 if (colIndex === 0 && position != null && orderNumber.trim() !== '') {
@@ -1310,11 +1643,12 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                 promises.push((async () => {
                   try {
                     const pos = data[row][0];
-                    const records = await getRecord(orderNumber, pos);
+                    const records = await getRecord(orderNumber,pos)
+
 
                     if (Number(records.item) === Number(pos)) {
-                      const { material_code, unit_price, quantity } = records;
-                      if (quantity > 0) {
+                      const { material_code, unit_price, total_quantity } = records;
+                      if (total_quantity > 0) {
                         const materialDetails = await getMaterial(material_code);
                         const subheading = materialDetails?.subheading || '';
 
@@ -1327,9 +1661,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
                         }
 
                         if (sharedState.TRM) {
-                          batchChanges.push([row, 3, String(unit_price/100)]);
+                          batchChanges.push([row, 3, String(formatMoney(unit_price/100))]);
                         } else if (!sharedState.TRM && (parseFloat(sharedState.TRMCOP) !== 0 && String(sharedState.TRMCOP) !== "")) {
-                          batchChanges.push([row, 3, String(parseFloat((unit_price/100) * sharedState.TRMCOP))]);
+                          batchChanges.push([row, 3, String(formatMoney((unit_price/100) * sharedState.TRMCOP))]);
                         } else {
                           batchChanges.push([row, 3, ""]);
                           batchChanges.push([row, 4, ""]);
@@ -1366,31 +1700,6 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
             items: {
               'copy': { name: 'Copiar' },
               'cut': { name: 'Cortar' },
-              'fill_column': {
-                name: 'Llenar toda la columna desde...',
-                callback: (key, selection) => {
-                  const hot = hotTableRef.current.hotInstance;
-                  const colIndex = selection[0].start.col;
-                  const rowIndex = selection[0].start.row;
-                  const value = prompt('Ingrese el valor para llenar la columna:', 'Valor');
-                  if (value !== null) {
-                    for (let i = rowIndex; i < hot.countRows(); i++) {
-                      hot.setDataAtCell(i, colIndex, value);
-                    }
-                  }
-                }
-              },
-              'clear_column_from_cell': {
-                name: 'Eliminar toda la columna desde...',
-                callback: (key, selection) => {
-                  const hot = hotTableRef.current.hotInstance;
-                  const colIndex = selection[0].start.col;
-                  const rowIndex = selection[0].start.row;
-                  for (let i = rowIndex; i < hot.countRows(); i++) {
-                    hot.setDataAtCell(i, colIndex, null);
-                  }
-                }
-              },
               'separator': Handsontable.plugins.ContextMenu.SEPARATOR,
               'undo': { name: 'Deshacer' },
               'redo': { name: 'Rehacer' }
@@ -1398,7 +1707,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
           }}
         />
       </Box>
-      <Button mt={1} height="5%" onClick={handleSubmit} >Asociar</Button>
+      {(isTable === "Create" || isActive === true) && (
+        <Button mt={1} bgColor="#F1D803" colorScheme="steal" textColor="black" height="5%" onClick={(isTable !== "Create")? UpdateData : handleSubmit} >{(isTable !== "Create")? "Reenviar" : "Asociar"}</Button>
+      )}
     </div>
   );
 }
