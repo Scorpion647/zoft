@@ -8,6 +8,14 @@ export enum AccessDataFields {
   confirmPassword = "confirmPassword",
 }
 
+export type InvoiceEmailProps = {
+  invoice_id: string;
+  type: string;
+  reason?: string;
+  body?: string;
+  subject?: string;
+};
+
 export class CustomDataError {
   email?: string;
   username?: string;

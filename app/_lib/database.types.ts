@@ -361,6 +361,19 @@ export type Database = {
         };
         Returns: string;
       };
+      get_invoice_email: {
+        Args: {
+          invoice_id: string;
+        };
+        Returns: {
+          email: string;
+          invoice_id: string;
+          invoice_updated_at: string;
+          supplier_name: string;
+          bill_id: string;
+          purchase_order: string;
+        }[];
+      };
       is_employee: {
         Args: {
           _supplier_id: number;
