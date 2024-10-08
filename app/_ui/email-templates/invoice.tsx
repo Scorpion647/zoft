@@ -9,13 +9,14 @@ export interface EmailTemplateProps {
   purchase_order: string;
   reason?: string;
   body?: string;
+  header: string;
 }
 
 export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = (
   params,
 ) => (
   <div>
-    <h1>Tu solicitud ha sido recibida para revisión</h1>
+    <h1>{params.header}</h1>
     <ul>
       <li>
         <b>Tipo de solicitud:</b> <span>{params.type}</span>
