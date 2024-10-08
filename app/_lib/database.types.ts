@@ -370,7 +370,7 @@ export type Database = {
           invoice_id: string;
           invoice_updated_at: string;
           supplier_name: string;
-          bill_id: string;
+          bill_number: string;
           purchase_order: string;
         }[];
       };

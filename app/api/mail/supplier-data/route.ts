@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     to: [data.email],
     subject: data.subject ?? "Aviso",
     react: EmailTemplate({
-      bill: email_data.bill_id,
+      bill: email_data.bill_number,
       date: email_data.invoice_updated_at,
       invoice_id: email_data.invoice_id,
       purchase_order: email_data.purchase_order,

@@ -4,7 +4,7 @@ OR REPLACE function get_invoice_email (invoice_id UUID) returns TABLE (
   invoice_id UUID,
   invoice_updated_at TIMESTAMP WITH TIME ZONE,
   supplier_name VARCHAR(255),
-  bill_id UUID,
+  bill_number VARCHAR(50),
   purchase_order VARCHAR(50)
 ) AS $$
     select
@@ -12,7 +12,7 @@ OR REPLACE function get_invoice_email (invoice_id UUID) returns TABLE (
         invoice.invoice_id as invoice_id,
         invoice.updated_at as invoice_updated_at,
         supplier.name as supplier_name,
-        bill.base_bill_id as bill_id,
+        supplier_data.bill_number as bill_number,
         bill.purchase_order
     from
         public.invoice_data invoice
