@@ -2,9 +2,13 @@
 'use client';
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Checkbox,ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure } from "@chakra-ui/react";
+import { useToast,Checkbox,ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Select } from "@chakra-ui/react";
 import { SearchIcon, CheckIcon, CloseIcon, AddIcon, ArrowForwardIcon, ArrowBackIcon } from "@chakra-ui/icons";
-import { getProfile, selectProfiles } from "../_lib/database/profiles";
+import { getProfile, selectProfiles} from "../_lib/database/profiles";
+import { insertSupplier, selectSingleSupplier, selectSuppliers } from "../_lib/database/suppliers";
+import { insertSupplierEmployee } from "../_lib/database/supplier_employee";
+import { updateProfile } from "../_lib/database/service";
+
 
 
 
@@ -27,13 +31,104 @@ const create = [
 export const CreateLargeUser = () => {
     const [Email, setEmail] = useState('');
     const [inputValue, setInputValue] = useState('');
+    const [Searchvalue, setSearchvalue] = useState('');
+    const [Selecctvalue, setSelecctvalue] = useState('');
     const [filteredValue, setFilteredValue] = useState('');
     const [isAccept, setisAccept] = useState(false);
+    const [Options, setOptions] = useState([]);
     const [Profiles, setProfiles] = useState([]);
-
+    const [name, setname] = useState("");
+    const [id, setid] = useState("");
+    const [Filteredselecct, setFilteredselecct] = useState([]);
+    const [isChecked, setIsChecked] = useState(false);
+    const toast = useToast();
     
-    
+    const handleCheckboxChange = (event) => {
+        setIsChecked(event.target.checked); // Actualiza el estado según si está marcado o no
+      };
 
+useEffect(() => {
+    const Search = async () => {
+    const data = await selectSuppliers({page: 1, limit: 3000})
+    const matches = data.filter(user =>
+        user.name.toLowerCase().includes(Searchvalue.toLowerCase())
+      );
+      setOptions(matches.slice(0, 3)); // Limitar a 3 coincidencias
+    
+    }
+    Search()
+},[Searchvalue])
+
+const AsocciateProfile = async () => {
+
+        if(parseInt(id) === 0){
+            const dataa = {
+            name: Searchvalue
+            }
+            if(isChecked === true){
+                dataa.domain = Email.split('@')[1];
+            }
+            const supplier = await insertSupplier(dataa)
+            if(supplier){
+                const ids = await selectSuppliers({page: 1, limit: 1, search: Searchvalue})
+                const obtener = await selectProfiles({limit: 1, page: 1, search: Email})
+                console.log(obtener[0].profile_id)
+                const employee = await insertSupplierEmployee({profile_id: obtener[0].profile_id, supplier_id: ids[0].supplier_id})
+
+                if(employee){
+                    toast({ title: "Asociacion se realizo correctamente", description: `La asociacion y creacion del proveedor se realizo con exito.`, status: "success", duration: 3000, isClosable: true });
+                setisAccept(false)
+                FetchData()
+                }else{
+                    toast({ title: 'Asociacion no se ha podido realizar con exito', description: "Hubo un error en la creacion o asociacion del usuario al proveedor", status: 'error', position: 'top', isClosable: true, duration: 10000 });
+                }
+            }else{
+                toast({ title: 'Asociacion no se ha podido realizar con exito', description: "Hubo un error en la creacion del proveedor", status: 'error', position: 'top', isClosable: true, duration: 10000 });
+            }
+        }else if(parseInt(id) !== 0){
+            const obtener = await selectProfiles({limit: 1, page: 1, search: Email})
+            const employee = await insertSupplierEmployee({profile_id: obtener[0].profile_id, supplier_id: id})
+            if(employee){
+                toast({ title: "Asociacion se realizo correctamente", description: `La asociacion del usuario se realizo con exito.`, status: "success", duration: 3000, isClosable: true });
+                setisAccept(false)
+                FetchData()
+            }
+        }else{
+
+        }
+    
+}
+
+
+    const handleSelectChange = async (event) => {
+        const selectedId = event.target.value;
+        console.log("Id seleccionado",selectedId)
+
+        if(parseInt(selectedId) !== 0){
+            const selected = await selectSingleSupplier(selectedId)
+    
+         if(selected){
+          setname(selected.name)
+        setid(selected.supplier_id)
+
+         }
+        }
+        else if(parseInt(selectedId) === 0){
+
+            setname(Searchvalue)
+        setid(0)
+         }
+
+      };
+
+const handleinput = (e) => {
+setSearchvalue(e.target.value)
+}
+
+const handlesupplier = (e) => {
+    setSelecctvalue(e.target.value)
+    setname()
+    }
 
     const handleFilterClick = () => {
         if (inputValue.trim() !== '') {
@@ -127,18 +222,35 @@ return(
         {isAccept && (<div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-300">
             <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20 ">
               <h2 className="text-xl font-bold mb-4">Confirmacion de Autorizacion de Usuario</h2>
-              <p className="font-semibold">¿Esta seguro de querer agregar al siguiente usuario?</p>
+              <p className="font-semibold">Seleccione el Proveedor al que quiere asociar este usuario</p>
               <p className="font-bold">{Email}</p>
-              <VStack mb={4} textAlign='start' justifyContent="start" alignItems='start' mt={5} >
-              <Checkbox>¿Desea agregar este dominio a la lista de dominios autorizados y aceptar a todos los usuarios registrados con este dominio a espera de autorizacion?</Checkbox>
-              </VStack>
-              <p className="font-bold">No acepte esta opcion si el dominio no es privado</p>
+              <Input mt={2} mb={2} onChange={handleinput} value={Searchvalue}>
+              </Input>
+              <Select onChange={handleSelectChange}  placeholder="Seleccione el Proveedor">
+              {Options.map((user) => (
+                  <option key={user.supplier_id}  value={user.supplier_id}>
+                    {user.name}
+                  </option>
+                ))}
+                {Options.length === 0 && Searchvalue && (
+                  <option value="0" onClick={handlesupplier}>
+                    Crear Proveedor: {Searchvalue}
+                  </option>
+                )}
+              </Select>
+
+              {id === 0 && (
+                <VStack mb={4} textAlign='start' justifyContent="start" alignItems='start' mt={5} >
+                <Checkbox isChecked={isChecked} onChange={handleCheckboxChange}>¿Desea agregar este dominio como dominio autorizado para este proveedor?</Checkbox>
+                </VStack>
+              )}
+              
              
               <HStack mt={4} justify="center" align="center">
                 <Button bgColor="red.500" colorScheme="teal" className=" px-4 py-2 rounded" onClick={() => setisAccept(false)}>
                     Cerrar
                 </Button>
-                <Button textColor="black" bgColor="#F1D803" colorScheme="teal" className=" px-4 py-2 rounded" onClick={() => setisAccept(false)}>
+                <Button textColor="black" bgColor="#F1D803" colorScheme="teal" className=" px-4 py-2 rounded" onClick={AsocciateProfile}>
                     Aceptar
                 </Button>
               </HStack>
@@ -149,6 +261,36 @@ return(
 );
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 export const CreateSmallUser = () =>  {
@@ -209,9 +351,7 @@ return(
               <h2 className="text-xl font-bold mb-4">Confirmacion de Autorizacion de Usuario</h2>
               <p className="font-semibold">¿Esta seguro de querer agregar al siguiente usuario?</p>
               <p className="font-bold">{Email}</p>
-              <VStack mb={4} textAlign='start' justifyContent="start" alignItems='start' mt={5} >
-              <Checkbox>¿Desea agregar este dominio a la lista de dominios autorizados y aceptar a todos los usuarios registrados con este dominio a espera de autorizacion?</Checkbox>
-              </VStack>
+              
               <p className="font-bold">No acepte esta opcion si el dominio no es privado</p>
              
               <HStack mt={4} justify="center" align="center">

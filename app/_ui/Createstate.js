@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'; 
-import { FormControl, FormLabel, Spinner, Switch, Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, Checkbox } from "@chakra-ui/react";
+import { useToast,FormControl, FormLabel, Spinner, Switch, Tooltip, Select, ChakraProvider, Flex, Box, VStack, Heading, HStack, Menu, MenuButton, MenuList, MenuItem, Button, Text, Input, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, Checkbox } from "@chakra-ui/react";
 import { SearchIcon, ChevronLeftIcon, CheckCircleIcon, DownloadIcon, AtSignIcon, AttachmentIcon, CalendarIcon, CheckIcon, CloseIcon, AddIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
@@ -73,12 +73,15 @@ export const CreatelargeAdmin = ({ sharedState, updateSharedState }) => {
   const [IsLoading,setIsLoading] = useState(false)
   const [selectedSupplier2,setselectedSupplier2] = useState()
   const [Role,setRole] = useState("")
-
+  const toast = useToast();
 
 
   const [IsAdmin,setIsAdmin] = useState(false)
   const [filteredData, setFilteredData] = useState([]);
 
+
+
+  
   useEffect(() => {
     const Validar = async () => {
       const role = await getRole();
@@ -278,47 +281,62 @@ const ChangeHola = (e) => {
                 {!IsLoading && (
                   <VStack>
                   {filteredData.map((item) => (
-                    <VStack w="100%" key={item.orden}>
-                      <Button
-                        onClick={() => ChangeReturn(item.consecutivo)}
-                        whiteSpace="nowrap"
-                        paddingRight={2}
-                        paddingLeft={2}
-                        justifyContent="center"
-                        alignItems="center"
-                        className="rounded-2xl"
-                        bg="gray.200"
-                        w="100%"
-                        h="10"
-                      >
-                        <HStack marginTop="1%" className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
-                          <HStack ml="3%" alignItems="center" justify="start" w="30%">
-                            <Text className="font-bold" fontSize="100%">{ShortConsecutivo(item.consecutivo)}</Text>
-                          </HStack>
-                          <HStack  alignItems="center" justify="center" w="20%">
-                            <Text className=" font-light" fontSize="100%">{item.orden}</Text>
-                          </HStack>
-                          <HStack spacing={4} alignItems="center" justify="center" w="30%">
-                            <Text className=" font-light" fontSize="100%">{item.fecha}</Text>
-                          </HStack>
-                          <HStack mr="3%" spacing={4} alignItems="center" justify="center" w="30%">
-                            <Text
-                              color={
-                                item.estado === "approved" ? "green" :
-                                  item.estado === "pending" ? "yellow.500" : "red"
-                              }
-                              fontSize="100%"
-                            >
-                              {item.estado === 'pending' && 'PENDIENTE'}
-                              {item.estado === 'approved' && 'APROBADO'}
-                              {item.estado === 'rejected' && 'RECHAZADO'}
-                              {item.estado !== 'pending' && item.estado !== 'approved' && item.estado !== 'rejected' && 'DESCONOCIDO'}
-                            </Text>
-                          </HStack>
-                        </HStack>
-                      </Button>
-                    </VStack>
-                  ))}
+  <VStack w="100%" key={item.orden}>
+    <Button
+      onClick={() => ChangeReturn(item.consecutivo)}
+      whiteSpace="nowrap"
+      paddingRight={2}
+      paddingLeft={2}
+      justifyContent="center"
+      alignItems="center"
+      className="rounded-2xl"
+      bg="gray.200"
+      w="100%"
+      h="10"
+    >
+      <HStack marginTop="1%" className="rounded-2xl" bgColor="white" align="center" justify="center" w="100%" h="100%">
+        <HStack ml="3%" alignItems="center" justify="start" w="30%">
+          <Tooltip label={item.consecutivo} aria-label={item.consecutivo}>
+            <Text
+              className="font-bold"
+              fontSize="100%"
+              onClick={(event) => {
+                event.stopPropagation(); // Detiene la propagación del evento
+                toast({ title: "ID de Factura se ha copiado con exito", description: `El ID de Factura se ha copiado al portapapeles con exito`, status: "success", duration: 3000, isClosable: true });
+                navigator.clipboard.writeText(item.consecutivo);
+                // Aquí puedes añadir un mensaje de éxito o feedback
+              }}
+              _hover={{ cursor: "pointer", textDecoration: "underline" }} // Cambia el cursor y añade un subrayado al pasar el mouse
+            >
+              {ShortConsecutivo(item.consecutivo)}
+            </Text>
+          </Tooltip>
+        </HStack>
+        <HStack alignItems="center" justify="center" w="20%">
+          <Text className="font-light" fontSize="100%">{item.orden}</Text>
+        </HStack>
+        <HStack spacing={4} alignItems="center" justify="center" w="30%">
+          <Text className="font-light" fontSize="100%">{item.fecha}</Text>
+        </HStack>
+        <HStack mr="3%" spacing={4} alignItems="center" justify="center" w="30%">
+          <Text
+            color={
+              item.estado === "approved" ? "green" :
+              item.estado === "pending" ? "yellow.500" : "red"
+            }
+            fontSize="100%"
+          >
+            {item.estado === 'pending' && 'PENDIENTE'}
+            {item.estado === 'approved' && 'APROBADO'}
+            {item.estado === 'rejected' && 'RECHAZADO'}
+            {item.estado !== 'pending' && item.estado !== 'approved' && item.estado !== 'rejected' && 'DESCONOCIDO'}
+          </Text>
+        </HStack>
+      </HStack>
+    </Button>
+  </VStack>
+))}
+
                 </VStack>
                 )}
               </Box>

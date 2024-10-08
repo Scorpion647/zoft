@@ -20,10 +20,10 @@ import {
   useDisclosure, Tooltip, Box, Input, Flex, HStack, Button, Icon, Select, useToast, Switch, VStack, Text, Alert, Progress, Spinner
 } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
-import { getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, updateMaterial, getRecord, updateRecord } from '@/app/_lib/database/service';
+import { getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, generateUniqueId, checkSupplierIdExists, getRecord, updateRecord } from '@/app/_lib/database/service';
 import { AddIcon, EditIcon } from '@chakra-ui/icons';
 import { insertBills } from '../_lib/database/base_bills';
-import { insertMaterial } from '../_lib/database/materials';
+import { insertMaterial, selectSingleMaterial, updateMaterial } from '../_lib/database/materials';
 import { insertSupplier, selectSingleSupplier, selectSuppliers } from '../_lib/database/suppliers';
 
 
@@ -52,6 +52,31 @@ const headers = {
 
 export const ImportDataBase = () => {
 
+
+  function normalizeNumber(input) {
+    // Remover cualquier símbolo de moneda como $ o €
+    const sanitizedInput = input.replace(/[$€]/g, '');
+  
+    // Remover separadores de miles (puntos o comas antes de grupos de tres dígitos)
+    const removeThousandsSeparators = sanitizedInput.replace(/(?<=\d)[.,](?=\d{3})/g, '');
+  
+    // Reemplazar la última coma por un punto para normalizar los decimales
+    const normalizedNumber = removeThousandsSeparators.replace(/,/, '.');
+  
+    // Convertir a número flotante
+    let parsedNumber = parseFloat(normalizedNumber);
+  
+    // Verificar si es un número válido
+    if (!isNaN(parsedNumber)) {
+      // Redondear a dos decimales si tiene parte decimal, o dejarlo como entero si no tiene decimales
+      parsedNumber = parsedNumber.toFixed(parsedNumber % 1 === 0 ? 0 : 2);
+    }
+  
+    return parsedNumber;
+  }
+  
+
+
   const [data1, setData1] = useState(Array(40).fill().map(() => Array(4).fill('')));
   const [isLoading, setisloading] = useState(false);
   const [data, setData] = useState(initialData.records);
@@ -66,7 +91,8 @@ export const ImportDataBase = () => {
   const [Buttons, setButtons] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
-
+  const { isOpen: isOpen2, onOpen: onOpen2, onClose: onClose2 } = useDisclosure();
+  const [originalData, setOriginalData] = useState({});
   const [formData, setFormData] = useState({});
 
   const handleChange = (e) => {
@@ -75,6 +101,124 @@ export const ImportDataBase = () => {
       [e.target.name]: e.target.value,
     });
   };
+
+
+  useEffect(() => {
+    if (isOpen2) {
+      // Restablecer los campos del formulario cuando se abra el modal
+      setFormDataa({
+        input1: '',
+        input2: '',
+        select2: '',
+        input3: '',
+      });
+      setOriginalData({});
+    }
+  }, [isOpen2]);
+  const handleChangee = (e) => {
+    setFormDataa({
+      ...formDataa,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const [formDataa, setFormDataa] = useState({
+    input1: '',
+    input2: '',
+    select2: '',
+    input3: '',
+  });
+
+
+  const fetchMaterialData = async () => {
+    try {
+      // Simulación de búsqueda de datos con el primer input (Código de Material)
+      const data = await selectSingleMaterial(formDataa.input1); // Implementa esta función para traer los datos
+      if (data) {
+        setOriginalData(data);
+        setFormDataa({
+          input1: data.material_code,
+          input2: data.subheading,
+          select2: data.type,
+          input3: data.measurement_unit,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'No se encontraron datos para este código de material',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching data", error);
+    }
+  };
+
+  const handleSubmitt = async () => {
+    // Validación
+    if (!formDataa.input1 || !formDataa.input2 || !formDataa.select2 || !formDataa.input3) {
+      return toast({
+        title: 'Error',
+        description: 'Todos los campos deben estar completos.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+
+    if (formDataa.input2.length !== 10) {
+      return toast({
+        title: 'Error',
+        description: 'La subpartida debe tener exactamente 10 caracteres.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+
+    // Compara datos originales y actualizados
+    const updatedData = {};
+
+    // Solo agrega los campos que hayan cambiado
+    if (formDataa.select2 !== originalData.type) {
+      updatedData.type = formDataa.select2;
+    }
+    if (formDataa.input2 !== originalData.subheading) {
+      updatedData.subheading = formDataa.input2;
+    }
+    if (formDataa.input3 !== originalData.measurement_unit) {
+      updatedData.measurement_unit = formDataa.input3;
+    }
+
+    try {
+      const response = await updateMaterial({target: formDataa.input1, data: updatedData}); // Implementa esta función
+      if (!response) {
+        toast({
+          title: 'Éxito',
+          description: 'Datos actualizados correctamente.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+        onClose2();
+        fetchData()
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Hubo un problema al actualizar los datos.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating data", error);
+    }
+  };
+
+
 
   const validateFields = () => {
     let requiredFields = [];
@@ -531,6 +675,9 @@ export const ImportDataBase = () => {
           currency
         ] = row;
 
+
+        
+
         const existingRecord = existingRecords.find(record => record.purchase_order === purchase_order && record.item === position);
         let supplierId;
 
@@ -543,36 +690,24 @@ export const ImportDataBase = () => {
           } else {
             supplierId = domainExists.supplier_id;
           }
-
-          const unitPriceParsed = parseFloat((parseFloat(unit_price).toFixed(2) * 100).toFixed(0));
-          console.log(
-            parseInt(position),
-            parseInt(String(quantity || 0).replace(/[.,]/g, '')),
-            String(material_code),
-            String(purchase_order),
-            measurement_unit,
-            unitPriceParsed,
-            currency,
-            new Date().toISOString(),
-            supplierId,
-            description,
-            parseFloat((net_price * 100).toFixed(0)),
-          )
+          
+          const unitPriceParsed = parseFloat((parseFloat(parseFloat(normalizeNumber(String(unit_price)))).toFixed(2) * 100).toFixed(0));
+          
           if (unitPriceParsed && !isNaN(unitPriceParsed)) {
             recordsToInsert.push({
               item: parseInt(position),
               approved_quantity: 0,
-              total_quantity: parseFloat(quantity),
+              total_quantity: parseFloat(normalizeNumber(String(quantity))),
               pending_quantity: 0,
               material_code: String(material_code),
               purchase_order: String(purchase_order),
               measurement_unit: measurement_unit,
-              unit_price: parseInt(unitPriceParsed) || 12345,
+              unit_price: parseInt((unitPriceParsed)),
               currency: String(currency),
               created_at: new Date().toISOString(),
               supplier_id: parseInt(supplierId),
               description: String(description),
-              net_price: parseInt(parseFloat((net_price * 100).toFixed(0))) || 12345,
+              net_price: parseInt(parseFloat((parseFloat(parseFloat(normalizeNumber(String(net_price))) * 100).toFixed(0)))),
             });
           } else {
             invalidMaterialEntries.push(row);
@@ -594,8 +729,9 @@ export const ImportDataBase = () => {
         if (subheading) {
           if (String(subheading).length === 10) {
             materialArgs.subheading = String(subheading);
-          } else if (String(subheading).length > 10) {
-            materialArgs.subheading = String(subheading).slice(0, 12);
+          } else{
+            completedTasks += 1;
+            continue
           }
         }
 
@@ -609,6 +745,7 @@ export const ImportDataBase = () => {
           "NACIONALIZADO": "nationalized",
           "OTRO": "other",
         };
+        
 
         if (typeMapping[type]) {
           materialArgs.type = typeMapping[type]
@@ -804,7 +941,7 @@ export const ImportDataBase = () => {
 
               colorScheme='teal'
               backgroundColor='#F1D803'
-              onClick={onOpen}
+              onClick={onOpen2}
 
             >
               <Icon as={AddIcon} w={5} h={5} color="black" />
@@ -820,6 +957,65 @@ export const ImportDataBase = () => {
           >
           </Switch>
         </HStack>
+        <Modal isOpen={isOpen2} onClose={onClose2}>
+      <ModalOverlay />
+      <ModalContent bgColor="gray.200">
+        <ModalHeader>Actualizar Material</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <FormControl isRequired>
+            <FormLabel>Código de Material</FormLabel>
+            <HStack>
+            <Input
+              bgColor="white"
+              name="input1"
+              value={formDataa.input1}
+              onChange={handleChangee}
+            />
+            <Button onClick={fetchMaterialData}>Buscar</Button>
+            </HStack>
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Subpartida</FormLabel>
+            <Input
+              bgColor="white"
+              name="input2"
+              value={formDataa.input2}
+              onChange={handleChangee}
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Tipo de Material</FormLabel>
+            <Select
+              bgColor="white"
+              name="select2"
+              value={formDataa.select2}
+              onChange={handleChangee}
+              placeholder="Selecciona una opción"
+            >
+              <option value="national">NACIONAL</option>
+              <option value="foreign">EXTRANJERO</option>
+              <option value="nationalized">NACIONALIZADO</option>
+              <option value="other">OTRO</option>
+            </Select>
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Unidad de Medida</FormLabel>
+            <Input
+              bgColor="white"
+              name="input3"
+              value={formDataa.input3}
+              onChange={handleChangee}
+            />
+          </FormControl>
+        </ModalBody>
+        <ModalFooter>
+          <Button colorScheme="blue" onClick={handleSubmitt}>
+            Actualizar
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
         <Modal isOpen={isOpen} onClose={onClose}>
           <ModalOverlay />
           <ModalContent bgColor="gray.200">
@@ -851,7 +1047,7 @@ export const ImportDataBase = () => {
             </ModalFooter>
           </ModalContent>
         </Modal>
-        {isProcessing && <Progress colorScheme="teal" value={progress} />}
+        {isProcessing && <Progress mt={2} colorScheme="teal" value={progress} />}
       </Box>
       <Box width="100%" height="400" >
         {isLoading && (

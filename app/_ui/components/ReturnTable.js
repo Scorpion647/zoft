@@ -36,6 +36,7 @@ function InfoModal({ isOpen, onClose, cellInfo, onSave }) {
   const [code, setCode] = useState(cellInfo?.code || '');
   const [subp, setSubp] = useState(cellInfo?.subp || '');
   const [unit, setUnit] = useState(cellInfo?.unit || '');
+  
 
   useEffect(() => {
     const verificar = async () => {
@@ -183,6 +184,8 @@ const ReturnTable = ({ suppliers, volver }) => {
   const [Order, setOrder] = useState("");
   const [status, setStatus] = useState('');
   const [Data,setData] = useState([])
+  const [origin,setorigin] = useState("")
+  const [numbeer,setnumbeer] = useState(0)
   useEffect(() => {
     fetchData()
   },[])
@@ -309,11 +312,47 @@ return "approved"
 
   };
 
+  const sendEmail = async (invoice, razon) => {
+    const data = {
+      invoice_id: invoice,
+      type: "Actualizacion",
+      subject: razon,
+      reason: razon,
+    };
+
+    const res = await fetch("/api/mail/supplier-data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await res.json();
+    if(result.error){
+      console.error(result.error)
+    }
+
+};
+
 
   const fetchData = async () => {
     setIsLoading(true)
+    let data = []
+    if(status !== ""){
+      await updateInvoice({invoice_id: suppliers, state: status })
+    }
+    const active = await selectSingleInvoice(suppliers)
+  if(active.state === "approved"){
+    setisapproved(true)
+  }else{
+    setisapproved(false)
+  }
     try{
-      let data = []
+     
+
+    
+    
       const invoice = await getSuplierInvoice(1,200,suppliers);
       const invo = await getInvo(suppliers)
       await Promise.all(
@@ -382,14 +421,27 @@ return "approved"
         ]);
         })
       )
-
+          // Después de llenar el array, ordenamos los objetos por record.item
+    data.sort((a, b) => {
+      // Asegúrate de que 'record.item' esté en la misma posición en 'data'
+      return a[1] - b[1]; // Asumiendo que record.item es el segundo elemento (índice 1)
+    });
       setData(data)
+      setnumbeer(numbeer + 1)
     }catch{
 
     }finally{
       setIsLoading(false)
+
+      if(active.state !== origin){
+        if(numbeer > 0){
+          sendEmail(suppliers,("El estado de su asociacion a sido cambiado por : "+(active.state === "approved" ? "Aprobado" : (active.state === "pending" ? "Pendiente" : "Rechazado") )))
+        }
+      }
     }
   }
+
+  
  
   const [error, setError] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -424,7 +476,6 @@ return "approved"
 
 
 
-
   useEffect(() => {
     calculateSum()
     calculateSum1()
@@ -436,6 +487,7 @@ return "approved"
   const hola = async () => {
     const prue = await inputvalue()
     setStatus(prue)
+    setorigin(prue)
   }
   hola()
   }, []);
@@ -512,16 +564,9 @@ return "approved"
 
  const change = async (e) => {
   setStatus(e)
-  await updateInvoice({invoice_id: suppliers, state: e })
  }
  const [isapproved, setisapproved] = useState(false);
- useEffect(() => {
-if(status === "approved"){
-  setisapproved(true)
-}else{
-  setisapproved(false)
-}
- },[status])
+
 
   return (
     <div className='items-center justify-self-center h-[400px] w-full'>

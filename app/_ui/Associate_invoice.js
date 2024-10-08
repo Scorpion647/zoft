@@ -6,9 +6,9 @@ import { SearchIcon, ArrowBackIcon, EditIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
-import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo, getSuplierInvoice } from '@/app/_lib/database/service';
+import { getRecords, getMaterial, getSupplier, insertRecordInfo, getRecord, updateMaterial, updateRecord, checkSubheadingExists, insertMaterial, insertInvoice, getInvo, getSuplierInvoice, getRecordInfo } from '@/app/_lib/database/service';
 import debounce from "lodash/debounce"; 
-import { insertSupplierData, selectSingleSupplierData, selectSupplierData, selectSupplierDataByInvoiceID, updateSupplierData } from "../_lib/database/supplier_data";
+import { deleteSupplierData, insertSupplierData, selectSingleSupplierData, selectSupplierData, selectSupplierDataByInvoiceID, updateSupplierData } from "../_lib/database/supplier_data";
 import { getRole } from "../_lib/supabase/client";
 import {userData} from "@/app/_lib/database/currentUser"
 import { selectSingleSupplier } from "../_lib/database/suppliers";
@@ -16,6 +16,7 @@ import { selectSingleSupplierEmployee } from "../_lib/database/supplier_employee
 import { getData } from "../_lib/database/app_data";
 import { selectBills, selectByPurchaseOrder, selectSingleBill } from "../_lib/database/base_bills";
 import { selectSingleInvoice, updateInvoice } from "../_lib/database/invoice_data";
+
 
 
 
@@ -38,6 +39,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   const [suggestions, setSuggestions] = useState([]);
   const [remainingCount, setRemainingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoading2, setIsLoading2] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const buttonRef = useRef(null);
   const [hola, sethola] = useState(false);
@@ -52,7 +54,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   const [columnSum2, setColumnSum2] = useState(0);
 
   const [selectedCurrency, setSelectedCurrency] = useState('USD'); 
-
+  const [copia,setcopia] = useState([])
 
 
   const [data, setData] = useState(Array(100).fill().map(() => Array(6).fill('')));
@@ -60,7 +62,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const pruebas = async () => {
+    setIsLoading2(true)
     let tfactura = 0;
+    let Copia = [];
     try {
         const invoice = await selectSingleInvoice(invoi);
         if(isTable === "View"){
@@ -78,7 +82,8 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
         
         
         const Data = await getSuplierInvoice(1, 200, invoi);
-        console.log(Data);
+        setcopia(Data)
+
 
         let total = 0;
         let bultos = 0;
@@ -139,8 +144,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
         updateSharedState('bultos', parseFloat(bultos.toFixed(0)));
         updateSharedState('proveedor', proveedor);
         setOrderNumber(purchase);
-        
-
+            // Después de llenar el array, ordenamos los objetos por record.item
+            
+            console.log("Changeeeeeees",changes)
         if (changes.length > 0) {
             console.log("Aplicando cambios de una vez en la tabla..."); // Para depuración
             hot.batch(() => {
@@ -154,7 +160,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
     } catch (error) {
         console.error('Error in pruebas function:', error);
     }finally{
-
+      setIsLoading2(false)
     }
 };
 
@@ -712,8 +718,14 @@ const UpdateData = async () => {
         } else {
           seenPositions.add(record_position);
 
-          const bill = await selectBills({limit: 1, page: 1, search: base_bill_id})
+          const bill = await getRecordInfo(base_bill_id)
 
+            const nuevoArray = copia.filter(objeto => objeto.base_bill_id !== base_bill_id);
+            if (nuevoArray.length !== copia.length) {
+              setcopia(nuevoArray)
+            }
+         
+            
           const record = {
             base_bill_id: base_bill_id,
             bill_number: String(sharedState.nofactura),
@@ -726,7 +738,7 @@ const UpdateData = async () => {
             billed_currency: conver,
             invoice_id: id
           };
-          if(bill[0]){
+          if(bill){
             update.push(record)
           }else{
             records.push(record);
@@ -759,10 +771,23 @@ const UpdateData = async () => {
     try {
         console.log("Records: ", records)
         console.log("Update: ", update)
+        console.log("Copia: ",copia)
+        for (const objeto of copia) {
+          if (Object.keys(objeto).length > 0) { // Verifica si el objeto no está vacío
+            try {
+              console.log(objeto.supplier_data_id)
+              const deleted = await deleteSupplierData(objeto.supplier_data_id);
+            } catch (error) {
+              console.error('Error en la operación asíncrona:', error);
+            }
+          }
+        }
         if(records){
+          console.log("se va por aca")
           await insertSupplierData(records);
         }
         if(update){
+          console.log("se va por aqui")
           await updateSupplierData(update)
         }
         await updateInvoice({invoice_id: invoi, state: "pending"})
@@ -1072,17 +1097,11 @@ const UpdateData = async () => {
     }
 
     try {
-      console.log("Este es el Id:", id)
-      console.log("Entramos aqui",records)
-        await insertSupplierData(records);
-        const date = transformDateTime(new Date())
-        console.log(orderNumber,sharedState.nofactura,date,suname,id)
-        //await sendEmail()
-        //await sendEmail("jhoyflow15@gmail.com",orderNumber,sharedState.nofactura,date,suname,id)     
-      
-        sendEmail();
+      await insertSupplierData(records);
+      const date = transformDateTime(new Date())
+      sendEmail(id)
       alert('Registros enviados correctamente.');
-      //setisTable(false);
+      setisTable(false);
     } catch (error) {
       console.error('Error completo:', error);
       if (error.message) {
@@ -1127,42 +1146,24 @@ const UpdateData = async () => {
 
 
 
-  const sendEmail = async () => {
-    document.getElementById("sendEmailButton").addEventListener("click", async () => {
-      // Example data to send in the POST request
+  const sendEmail = async (invoice) => {
       const data = {
-        email: "recipient@example.com",
-        purchase_order: "PO123456",
-        bill: "BILL987654",
-        date: "2024-10-03",
-        supplier_name: "Supplier XYZ",
-        invoice_id: "INV20231003",
-        type: "Invoice",
-        reason: "Service Charges",
-        body: "This is a detailed description of the charges.",
-        subject: "Invoice for Services"
+        invoice_id: invoice,
+        type: "Ingreso",
       };
   
-      try {
-        const response = await fetch("/api/email/invoice", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data), // Send the data as JSON
-        });
+      const res = await fetch("/api/mail/supplier-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
   
-        if (response.ok) {
-          const result = await response.json();
-          console.log("Email sent successfully:", result);
-        } else {
-          const errorResult = await response.json();
-          console.error("Error sending email:", errorResult);
-        }
-      } catch (error) {
-        console.error("Network error occurred while sending email:", error);
+      const result = await res.json();
+      if(result.error){
+        console.error(result.error)
       }
-    });
   
   };
   
