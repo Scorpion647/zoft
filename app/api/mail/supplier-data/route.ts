@@ -8,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: Request) {
   const data = await request.json();
 
-  if (!data.invoice_id || !data.type) {
+  if (!data.invoice_id || !data.type || !data.header) {
     console.error({
       error: "Invalid data",
       data,
@@ -44,13 +44,35 @@ export async function POST(request: Request) {
     });
   }
 
+  function transformDateTime(inputDate: string | number | Date) {
+    const date = new Date(inputDate);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+
+    const formattedMinutes = minutes < 10 ? "00" : minutes;
+
+    const formattedDate = `${year}-${month}-${day} ${hours}:${formattedMinutes} ${ampm}`;
+
+    return formattedDate;
+  }
+
   const { error } = await resend.emails.send({
     from: "Zofzf team <team@zofzf.online>",
-    to: [data.email],
+    to: [email_data.email],
     subject: data.subject ?? "Aviso",
     react: EmailTemplate({
+      header: data.header,
       bill: email_data.bill_number,
-      date: email_data.invoice_updated_at,
+      date: transformDateTime(email_data.invoice_updated_at),
       invoice_id: email_data.invoice_id,
       purchase_order: email_data.purchase_order,
       supplier_name: email_data.supplier_name,
