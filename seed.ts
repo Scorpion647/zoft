@@ -10,7 +10,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const profilesN = 10;
 const suppliersN = 10;
 const materialsN = 100;
-const base_billsN = 2;
+const base_billsN = 1;
 
 const main = async () => {
   const seed = await createSeedClient();

@@ -419,6 +419,12 @@ export type Database = {
         };
         Returns: string;
       };
+      update_bill_quantities: {
+        Args: {
+          base_bill_id: string;
+        };
+        Returns: undefined;
+      };
       user_is: {
         Args: {
           user_role?: "administrator" | "employee" | "guest";

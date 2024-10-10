@@ -14,7 +14,7 @@ CREATE TABLE public.supplier_data (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   modified_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   PRIMARY KEY (supplier_data_id),
-  FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON UPDATE cascade,
+  FOREIGN key (invoice_id) REFERENCES public.invoice_data (invoice_id) ON UPDATE cascade ON DELETE cascade,
   FOREIGN key (base_bill_id) REFERENCES public.base_bills (base_bill_id) ON DELETE cascade ON UPDATE cascade,
   FOREIGN key (created_by) REFERENCES public.profiles (profile_id) ON DELETE SET NULL ON UPDATE cascade
 );

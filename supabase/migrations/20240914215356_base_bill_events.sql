@@ -31,7 +31,7 @@ CREATE POLICY "delete for base bills" ON public.base_bills FOR delete TO authent
 CREATE
 OR REPLACE function public.before_base_bill_update () returns trigger AS $$
 begin
-  if new.approved_quantity > new.total_quantity  then
+  if new.approved_quantity + new.pending_quantity > new.total_quantity then
       raise invalid_parameter_value using message='The given quantity exceeds the real quantity. You should increase the total quantity available or decrease the given quantity';
   end if;
   return new;

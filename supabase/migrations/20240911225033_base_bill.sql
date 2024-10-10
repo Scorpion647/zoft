@@ -47,7 +47,7 @@ CREATE FUNCTION is_positive_value (float8) returns BOOLEAN AS $$ begin
 end; $$ language plpgsql;
 
 
-CREATE DOMAIN positive_float AS float8 CHECK (is_positive_value (value));
+CREATE DOMAIN positive_float AS DECIMAL(20, 8) CHECK (is_positive_value (value));
 
 
 CREATE DOMAIN positive_integer AS INTEGER CHECK (is_positive_value (value::float4));
