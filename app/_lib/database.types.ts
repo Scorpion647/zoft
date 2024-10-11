@@ -115,6 +115,78 @@ export type Database = {
           },
         ];
       };
+      data_tracking: {
+        Row: {
+          bill_measurement_unit: string | null;
+          bill_number: string | null;
+          bill_total_price: number | null;
+          bill_unit_price: number | null;
+          code: string | null;
+          created_at: string | null;
+          data_total_price: number | null;
+          data_unit_price: number | null;
+          description: string | null;
+          fmm: string | null;
+          gross_weight: number | null;
+          id: number;
+          items: number | null;
+          material_measurement_unit: string | null;
+          packages: number | null;
+          purchase_order: string | null;
+          quantity: number | null;
+          subheading: string | null;
+          supplier_name: string | null;
+          trm: number | null;
+          type: Database["public"]["Enums"]["material_type"] | null;
+        };
+        Insert: {
+          bill_measurement_unit?: string | null;
+          bill_number?: string | null;
+          bill_total_price?: number | null;
+          bill_unit_price?: number | null;
+          code?: string | null;
+          created_at?: string | null;
+          data_total_price?: number | null;
+          data_unit_price?: number | null;
+          description?: string | null;
+          fmm?: string | null;
+          gross_weight?: number | null;
+          id?: number;
+          items?: number | null;
+          material_measurement_unit?: string | null;
+          packages?: number | null;
+          purchase_order?: string | null;
+          quantity?: number | null;
+          subheading?: string | null;
+          supplier_name?: string | null;
+          trm?: number | null;
+          type?: Database["public"]["Enums"]["material_type"] | null;
+        };
+        Update: {
+          bill_measurement_unit?: string | null;
+          bill_number?: string | null;
+          bill_total_price?: number | null;
+          bill_unit_price?: number | null;
+          code?: string | null;
+          created_at?: string | null;
+          data_total_price?: number | null;
+          data_unit_price?: number | null;
+          description?: string | null;
+          fmm?: string | null;
+          gross_weight?: number | null;
+          id?: number;
+          items?: number | null;
+          material_measurement_unit?: string | null;
+          packages?: number | null;
+          purchase_order?: string | null;
+          quantity?: number | null;
+          subheading?: string | null;
+          supplier_name?: string | null;
+          trm?: number | null;
+          type?: Database["public"]["Enums"]["material_type"] | null;
+        };
+        Relationships: [];
+      };
       invoice_data: {
         Row: {
           created_at: string;
@@ -418,6 +490,14 @@ export type Database = {
           "": unknown;
         };
         Returns: string;
+      };
+      track_bill: {
+        Args: {
+          bill_id: string;
+          clean_data?: boolean;
+          clean_bill?: boolean;
+        };
+        Returns: undefined;
       };
       update_bill_quantities: {
         Args: {
