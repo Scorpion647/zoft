@@ -55,6 +55,10 @@ begin
         update public.invoice_data set state = 'pending' where invoice_id = old.invoice_id;
     end if;
 
+    if (select count(*) from public.supplier_data where invoice_id = old.invoice_id) = 0 then
+        delete from public.invoice_data where invoice_id = old.invoice_id;
+    end if;
+
     perform public.update_bill_quantities(old.base_bill_id);
 
     return old;
