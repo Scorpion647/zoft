@@ -190,6 +190,7 @@ export type Database = {
       invoice_data: {
         Row: {
           created_at: string;
+          feedback: string | null;
           invoice_id: string;
           last_modified_by: string | null;
           state: Database["public"]["Enums"]["invoice_state"];
@@ -198,6 +199,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          feedback?: string | null;
           invoice_id?: string;
           last_modified_by?: string | null;
           state?: Database["public"]["Enums"]["invoice_state"];
@@ -206,6 +208,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          feedback?: string | null;
           invoice_id?: string;
           last_modified_by?: string | null;
           state?: Database["public"]["Enums"]["invoice_state"];
@@ -494,8 +497,8 @@ export type Database = {
       track_bill: {
         Args: {
           bill_id: string;
-          clean_data?: boolean;
           clean_bill?: boolean;
+          clean_data?: boolean;
         };
         Returns: undefined;
       };
