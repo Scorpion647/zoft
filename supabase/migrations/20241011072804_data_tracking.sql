@@ -26,8 +26,8 @@ CREATE TABLE public.data_tracking (
 CREATE
 OR REPLACE function track_bill (
   bill_id UUID,
-  clean_data BOOLEAN DEFAULT FALSE,
-  clean_bill BOOLEAN DEFAULT FALSE
+  clean_bill BOOLEAN DEFAULT FALSE,
+  clean_data BOOLEAN DEFAULT FALSE
 ) returns void AS $$
     declare
         _base_bill public.base_bills%rowtype;
@@ -83,12 +83,10 @@ BEGIN
         );
     end loop;
 
-    if (clean_data) then
-        delete from public.supplier_data where base_bill_id=$1;
-    end if;
-
     if (clean_bill) then
         delete from public.base_bills where base_bill_id=$1;
+    elseif(clean_data) then
+        delete from public.supplier_data where base_bill_id=$1;
     end if;
 END
 $$ language plpgsql;
