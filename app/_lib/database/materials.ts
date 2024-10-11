@@ -40,6 +40,21 @@ export async function selectMaterials(
 ) {
   let query = supabase.from("materials").select("*");
 
+  if (params.equals) {
+    const equalsList =
+      params.equals instanceof Array ? params.equals : [params.equals];
+
+    for (let it of equalsList) {
+      const keys = Object.keys(it) as Array<keyof typeof it>;
+
+      for (let key of keys) {
+        if (it[key] !== undefined && it[key] !== null) {
+          query = query.eq(key, it[key]);
+        }
+      }
+    }
+  }
+
   if (params.search && params.search.trim().length > 0) {
     query = query.textSearch("material_search", params.search, {
       type: "websearch",

@@ -71,7 +71,6 @@ export async function updateProfile(
   }
 }
 
-// TODO: Check if this functions work
 export async function deleteAccount() {
   const supabase = createClient();
 

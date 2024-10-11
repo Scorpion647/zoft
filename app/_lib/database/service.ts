@@ -92,7 +92,7 @@ export async function getInvoice(
       query.order(column, options);
     });
   }
-  
+
   const { data, error } = await query.range(
     (page - 1) * limit,
     page * limit - 1,
@@ -101,10 +101,10 @@ export async function getInvoice(
   if (error) {
     return handleError(error);
   }
-  
+
   return data;
 }
-  
+
 export async function getSuplierInvoice(
   page: number = 1,
   limit: number = 10,
@@ -150,7 +150,7 @@ export async function getlastmodified(
     .from("supplier_data")
     .select("*")
     .eq("invoice_id", invoiceId)
-    .order("modified_at", { ascending: false })  // Ordenar de más reciente a más antiguo
+    .order("modified_at", { ascending: false }) // Ordenar de más reciente a más antiguo
     .limit(1) // Solo tomar el más reciente
     .single(); // Esperar que haya solo un registro
 
@@ -161,37 +161,37 @@ export async function getlastmodified(
   return data;
 }
 
-export async function checkSubheadingExists(subheading: number): Promise<boolean> {
+export async function checkSubheadingExists(
+  subheading: number,
+): Promise<boolean> {
   const supabase = createClient();
   const { data, error } = await supabase
-      .from('materials')
-      .select('subheading')
-      .eq('subheading', subheading)
-      .limit(1); // Limitamos a 1 resultado para optimización
+    .from("materials")
+    .select("subheading")
+    .eq("subheading", subheading)
+    .limit(1); // Limitamos a 1 resultado para optimización
 
   if (error) {
-      console.error("Error buscando subheading:", error.message);
-      return false; // Retornamos false si hay un error
+    console.error("Error buscando subheading:", error.message);
+    return false; // Retornamos false si hay un error
   }
 
   // Si los datos no están vacíos, significa que existe el subheading
   return data.length > 0;
 }
 
-export async function SearchRecord(base_bill_id: number): Promise<Tables<'base_bills'> | CustomDataError | null> {
+export async function SearchRecord(
+  base_bill_id: number,
+): Promise<Tables<"base_bills"> | CustomDataError | null> {
   const supabase = createClient();
   const { data, error } = await supabase
-      .from('base_bills')
-      .select('*')
-      .eq('base_bill_id', base_bill_id)
-      .single();
-
-       
-
+    .from("base_bills")
+    .select("*")
+    .eq("base_bill_id", base_bill_id)
+    .single();
 
   if (error) {
-
-      return handleError(error);
+    return handleError(error);
   }
 
   // Si los datos no están vacíos, significa que existe el subheading
@@ -257,7 +257,7 @@ export async function updateMaterial(
   const { error } = await supabase
     .from("materials")
     .update(new_data)
-    .eq("material_code", material_code)
+    .eq("material_code", material_code);
 
   if (error) {
     return handleError(error);
@@ -649,7 +649,7 @@ export async function getEmployees(
   // Establecer el rango para paginación
   const { data, error } = await query.range(
     (page - 1) * limit,
-    page * limit - 1
+    page * limit - 1,
   );
 
   // Manejar errores
