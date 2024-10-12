@@ -13,6 +13,18 @@ export async function selectProfiles(
 ) {
   let query = supabase.from("profiles").select("*");
 
+  if (params.equals) {
+    const keys = Object.keys(params.equals) as Array<
+      keyof typeof params.equals
+    >;
+
+    for (let key of keys) {
+      if (params.equals[key] !== undefined && params.equals[key] !== null) {
+        query = query.eq(key, params.equals[key]);
+      }
+    }
+  }
+
   if (params.search && params.search.trim().length > 0) {
     query = query.textSearch("profiles_search", params.search, {
       type: "websearch",

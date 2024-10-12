@@ -26,7 +26,7 @@ export type MultiSelectQuery<Table> = Simplify<{
   page?: number;
   search?: string;
   orderBy?: OrderBy<Table>;
-  equals: Arrayable<{
+  equals: {
     [K in keyof Table]?: Table[K];
-  }>;
+  };
 }>;

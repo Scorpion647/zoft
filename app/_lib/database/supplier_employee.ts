@@ -43,16 +43,13 @@ export async function selectsupplier_employees(
   let query = supabase.from("supplier_employees").select("*");
 
   if (params.equals) {
-    const equalsList =
-      params.equals instanceof Array ? params.equals : [params.equals];
+    const keys = Object.keys(params.equals) as Array<
+      keyof typeof params.equals
+    >;
 
-    for (let it of equalsList) {
-      const keys = Object.keys(it) as Array<keyof typeof it>;
-
-      for (let key of keys) {
-        if (it[key] !== undefined && it[key] !== null) {
-          query = query.eq(key, it[key]);
-        }
+    for (let key of keys) {
+      if (params.equals[key] !== undefined && params.equals[key] !== null) {
+        query = query.eq(key, params.equals[key]);
       }
     }
   }
