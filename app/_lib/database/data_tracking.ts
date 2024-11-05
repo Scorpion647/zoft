@@ -31,7 +31,7 @@ export async function selectSingleTrack(id: Tables<"data_tracking">["id"]) {
   return data;
 }
 
-export async function selectMaterials(
+export async function selectTracks(
   params: MultiSelectQuery<Tables<"data_tracking">>,
 ) {
   let query = supabase.from("data_tracking").select("*");
@@ -49,7 +49,7 @@ export async function selectMaterials(
   }
 
   if (params.search && params.search.trim().length > 0) {
-    query = query.textSearch("material_search", params.search, {
+    query = query.textSearch("bill_number", params.search, {
       type: "websearch",
     });
   }
