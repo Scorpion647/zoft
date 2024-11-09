@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { HotTable } from '@handsontable/react';
 import 'handsontable/dist/handsontable.full.css';
@@ -32,7 +31,7 @@ const Typematerial = (type) => {
     return 'OTRO';
 };
 
-export const Tracking_bd = ({ onButtonClick }) => {
+export const Tracking_bd = () => {
     const [data, setData] = useState([]);
     const [groupedData, setGroupedData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
@@ -241,7 +240,7 @@ export const Tracking_bd = ({ onButtonClick }) => {
             const hotTableInstance = hotTableRef.current.hotInstance;
             const visibleData = hotTableInstance.getData(); 
 
-            await onButtonClick(visibleData);
+            
         }
 
 

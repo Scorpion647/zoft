@@ -1,6 +1,9 @@
 "use client";
 
 import { getData, saveAppData } from "@/app/_lib/database/app_data";
+import { selectBills } from "@/app/_lib/database/base_bills";
+import { selectInvoice_data } from "@/app/_lib/database/invoice_data";
+import { selectProfiles } from "@/app/_lib/database/profiles";
 import MainButton from "@/app/_ui/component_items/MainButton";
 import { CreatelargeDomain, CreateSmallDomain } from "@/app/_ui/CreateDomain";
 import { CreatelargeAdmin } from "@/app/_ui/Createstate";
@@ -48,6 +51,7 @@ import {
   useDisclosure,
   VStack,
   useMediaQuery,
+  Tooltip,
 } from "@chakra-ui/react";
 import "handsontable/dist/handsontable.full.css";
 import { useRouter } from "next/navigation";
@@ -77,34 +81,65 @@ export default function Admin() {
   const [iLargeScreen] = useMediaQuery("(min-width: 1024px)");
 
   const [showRightBox, setShowRightBox] = useState(false);
+  const [PendingUsers, setPendingUsers] = useState(0)
+  const [Pendingbills, setPendingbills] = useState(0)
 
-  const [isScreenSmall, setIsScreenSmall] = useState(window.innerWidth < 1000);
+  const obtenerValorDesdeDB = async () => {
+    try {
+      const users = await selectProfiles({ limit: 200, page: 1, equals: { user_role: "guest" } });
+      const bills = await selectInvoice_data({ limit: 200, page: 1, equals: { state: "pending" } });
+  
 
+  
+      // Verificar si 'users' es un array y tiene elementos
+      if (Array.isArray(users) && users.length > 0) {
+    
+        setPendingUsers(users.length);
+  
+      } else {
+      
+        setPendingUsers(0);
+      }
+  
+   
+  
+      // Verificar si 'bills' es un array y tiene elementos
+      if (Array.isArray(bills) && bills.length > 0) {
+ 
+      
+        // Verificar que el primer elemento tiene 'supplier_id' definido
+        if (bills[0].supplier_id !== undefined) {
+      
+          setPendingbills(bills.length);
+     
+        } else {
+    
+          setPendingbills(0);
+        }
+      } else {
+        setPendingbills(0);
+      }
+  
+    } catch (error) {
+      console.error("Error al obtener datos desde la base de datos:", error);
+    }
+  };
+  
   useEffect(() => {
-    const handleResize = () => {
-      setIsScreenSmall(window.innerWidth < 1000);
-    };
 
-    window.addEventListener("resize", handleResize);
+      // Llama a obtenerValorDesdeDB una vez para obtener el valor inicial
+   
+      obtenerValorDesdeDB()
 
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    // Configura un intervalo para llamar a obtenerValorDesdeDB cada 60 segundos
+    const intervalo = setInterval(obtenerValorDesdeDB, 10000);
+
+    // Limpia el intervalo cuando el componente se desmonte
+    return () => clearInterval(intervalo);
+ 
+
   }, []);
-
-  const [isScreenLarge, setIsScreenLarge] = useState(window.innerWidth > 1000);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsScreenLarge(window.innerWidth > 1000);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  
 
   const screen = (numero: number) => {
     if (numero == 1) {
@@ -278,11 +313,13 @@ export default function Admin() {
               <Box position="absolute" right={4}>
               
                 <Menu>
-                  <MenuButton>
-                    <Button colorScheme="teal" backgroundColor="#F1D803">
-                      <Icon as={IoMenu} w={5} h={5} color="black" />
-                    </Button>
-                    </MenuButton>
+                <MenuButton
+    as={Button} // Usa Button como el elemento base para MenuButton
+    colorScheme="teal"
+    backgroundColor="#F1D803"
+  >
+    <Icon as={IoMenu} w={5} h={5} color="black" />
+  </MenuButton>
                     <MenuList>
                       <MenuItem icon={<AddIcon color="black" />}>
                         Colaboradores
@@ -330,7 +367,7 @@ export default function Admin() {
                 borderColor="gray.300"
                 backgroundColor="gray.100"
                 borderRadius="md"
-                p={isScreenSmall ? "1" : "3"}
+                p={iSmallScreen ? "1" : "3"}
                 align="center"
                 transition="width 0.3s ease-in-out">
                 <VStack height={iLargeScreen ? "" : "60%"}   justify={iLargeScreen ? "center" : ""}>
@@ -345,11 +382,12 @@ export default function Admin() {
                         padding={iSmallScreen ? "5px" : "" }
                         color="black"
                       />
+                   
                     }
                     
                     backgroundColor={iSmallScreen  ? "transparent" : isRegistro ? "teal" : "#F1D803"}
                     showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
+                    isScreenSmall={iSmallScreen}
                     MenuL={MenuL}
                   />
                   <MainButton
@@ -364,7 +402,7 @@ export default function Admin() {
                        />}
                     backgroundColor={iSmallScreen ? "transparent" : isUsuario ? "teal" : "#F1D803"}
                     showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
+                    isScreenSmall={iSmallScreen}
                     MenuL={MenuL}
                   />
                   <MainButton
@@ -379,7 +417,7 @@ export default function Admin() {
                        />}
                     backgroundColor={iSmallScreen ? "transparent" : isDominio ? "teal" : "#F1D803"}
                     showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
+                    isScreenSmall={iSmallScreen}
                     MenuL={MenuL}
                   />
                   <MainButton
@@ -394,23 +432,23 @@ export default function Admin() {
                       />}
                     backgroundColor={iSmallScreen ? "transparent" : isDatos ? "teal" : "#F1D803"}
                     showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
+                    isScreenSmall={iSmallScreen}
                     MenuL={MenuL}
                   />
 
 <MainButton
-                    onClick={() => screen(4)}
+                    onClick={() => screen(5)}
                     text="Archivo de Seguimiento"
                     icon={<ExternalLinkIcon
                       w={iSmallScreen ? "25px" : iMediumScreen ? "12px" : "14px"}
                       h={iSmallScreen ? "25px" : iMediumScreen ? "12px" : "14px"}
-                      backgroundColor={iSmallScreen ? isDatos ? "teal" : "#F1D803" : ""}
+                      backgroundColor={iSmallScreen ? isTracking ? "teal" : "#F1D803" : ""}
                       padding={iSmallScreen ? "5px" : "" }
                       color="black"
                       />}
-                    backgroundColor={iSmallScreen ? "transparent" : isDatos ? "teal" : "#F1D803"}
+                    backgroundColor={iSmallScreen ? "transparent" : isTracking ? "teal" : "#F1D803"}
                     showRightBox={showRightBox}
-                    isScreenSmall={isScreenSmall}
+                    isScreenSmall={iSmallScreen}
                     MenuL={MenuL}
                   />
                   
@@ -424,36 +462,46 @@ export default function Admin() {
                     bg={iSmallScreen  ? "transparent" : "gray.200"}
                     spacing="20%"
                     height="20%">
+                    <Tooltip label={PendingUsers > 0 ? "Hay Usuarios pendientes" : ""}>
                     <Button
+                    onClick={() => screen(2)}
                       position="relative"
                       colorScheme="transparent"
                       bg="transparent">
-                      <Text
+                      {(PendingUsers > 0) && (
+                        <Text
                         bottom="5"
                         borderRadius="100"
                         backgroundColor="red"
                         right="1"
                         position="absolute"
                         color="white">
-                        5
+                        {PendingUsers}
                       </Text>
+                      )}
                       <Icon w={4} h={4} color="black" as={FaUserCheck} />
                     </Button>
+                    </Tooltip>
+                    <Tooltip label={Pendingbills > 0 ? "Hay Registros pendiente": ""}>
                     <Button
+                    onClick={() => screen(1)}
                       position="relative"
                       colorScheme="transparent"
                       bg="transparent">
-                      <Text
+                      {(Pendingbills > 0) && (
+                        <Text
                         bottom="5"
                         borderRadius="100"
                         backgroundColor="red"
                         right="1"
                         position="absolute"
                         color="white">
-                        5
+                        {Pendingbills}
                       </Text>
+                      )}
                       <CalendarIcon w={4} h={4} color="black" />
                     </Button>
+                    </Tooltip>
                   </VStack>
              
               </VStack>
@@ -510,9 +558,23 @@ export default function Admin() {
                   !isTracking && (
                     <>
                     
-                        <>
+                       
                           <ImportDataBase />
-                        </>
+                       
+                      
+                      
+                    </>
+                  )}
+                  {!isRegistro &&
+                  !isUsuario &&
+                  !isDominio &&
+                  !isDatos &&
+                  isTracking && (
+                    <>
+                    
+                       
+                          <Tracking_bd />
+                       
                       
                       
                     </>

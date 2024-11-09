@@ -1,7 +1,7 @@
 'use client'
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Radio,RadioGroup,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,Alert, Switch, Tooltip,  Box, VStack, HStack,  Button, Text, Input, useDisclosure, Icon, Spinner } from "@chakra-ui/react";
+import { useMediaQuery,Radio,RadioGroup,Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,Alert, Switch, Tooltip,  Box, VStack, HStack,  Button, Text, Input, useDisclosure, Icon, Spinner } from "@chakra-ui/react";
 import { SearchIcon, ArrowBackIcon, EditIcon } from "@chakra-ui/icons";
 import Handsontable from 'handsontable';
 import { HotTable } from '@handsontable/react';
@@ -46,6 +46,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
   const hotTableRef = useRef(null);
   const [factunitprice, setfactunitprice] = useState(0);
   const [facttotalvalue, setfacttotalvalue] = useState(0);
+  const [iSmallScreen] = useMediaQuery("(max-width: 768px)");
+  const [iMediumScreen] = useMediaQuery("(min-width: 768px) and (max-width: 1024px)");
+  const [iLargeScreen] = useMediaQuery("(min-width: 1024px)");
 
   
   const [position, setposition] = useState(0);
@@ -66,6 +69,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
 
     let tfactura = 0;
     let Copia = [];
+    const hot = hotTableRef.current.hotInstance;
     try {
       const invoice = await selectSingleInvoice(invoi);
       
@@ -84,7 +88,7 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
       let cont = 0;
       let groupedData = {};
   
-      const hot = hotTableRef.current.hotInstance;
+      
       const changes = [];
   
       // Procesar las facturas en paralelo
@@ -102,8 +106,9 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
               const trmCondition = datas.billed_unit_price !== bill[0]?.unit_price;
               updateSharedState('TRM', !trmCondition);
               updateSharedState('TRMCOP', trmCondition ? (parseFloat((datas.billed_unit_price/bill[0]?.unit_price).toFixed(10))) : undefined);
+              setSelectedCurrency(datas.billed_currency)
             }
-  
+
             // Actualización de campos
             updateSharedState('nofactura', datas.bill_number);
             total += datas.gross_weight || 0;
@@ -122,60 +127,69 @@ export const Associate_invoice = ({ setisTable, isTable, sharedState, updateShar
         }
       });
   
-      // Esperar a que todas las promesas de facturas se resuelvan
       await Promise.all(billPromises);
-  
-      // Actualización final del estado
-      updateSharedState('pesototal', parseFloat(total.toFixed(2)));
-      updateSharedState('bultos', parseFloat(bultos.toFixed(0)));
-      updateSharedState('proveedor', proveedor);
-      setOrderNumber(purchase);
 
-      const grouped = [];
+    // Actualización final del estado
+    updateSharedState('pesototal', parseFloat(total.toFixed(2)));
+    updateSharedState('bultos', parseFloat(bultos.toFixed(0)));
+    updateSharedState('proveedor', proveedor);
+    setOrderNumber(purchase);
 
-// Crear pares y mantener la relación
-for (let i = 0; i < changes.length; i += 2) {
-    const dominant = changes[i]; // Dominante
-    const companion = changes[i + 1]; // Acompañante
-    grouped.push({
-        dominant: dominant,
-        companion: companion
-    });
-}
-
-// Paso 2: Ordenar los dominantes por su valor
-grouped.sort((a, b) => a.dominant[2] - b.dominant[2]);
-
-// Paso 3: Asignar nuevas filas
-const result = [];
-
-// Asignar nuevas filas y mantener la relación
-grouped.forEach((pair, index) => {
-    const newRow = index; // Nueva fila basada en el índice
-    const newDominant = [newRow, pair.dominant[1], pair.dominant[2]];
-    const newCompanion = [newRow, pair.companion[1], pair.companion[2]];
-    
-    result.push(newDominant);
-    result.push(newCompanion);
-});
-     
-
- 
-      // Actualizar la tabla de Handsontable en batch
-      if (result.length > 0) {
-        console.log("Aplicando cambios de una vez en la tabla...");
-        hot.batch(() => {
-          hot.setDataAtCell(result);
+    // Crear pares y mantener la relación
+    const grouped = [];
+    for (let i = 0; i < changes.length; i += 2) {
+        const dominant = changes[i]; // Dominante
+        const companion = changes[i + 1]; // Acompañante
+        grouped.push({
+            dominant: dominant,
+            companion: companion
         });
-      } else {
+    }
+
+    // Paso 2: Ordenar los dominantes por su valor
+    grouped.sort((a, b) => a.dominant[2] - b.dominant[2]);
+
+    // Paso 3: Asignar nuevas filas
+    const result = [];
+    grouped.forEach((pair, index) => {
+        const newRow = index; // Nueva fila basada en el índice
+        const newDominant = [newRow, pair.dominant[1], pair.dominant[2]];
+        const newCompanion = [newRow, pair.companion[1], pair.companion[2]];
+        
+        result.push(newDominant);
+        result.push(newCompanion);
+    });
+
+    // Actualizar la tabla de Handsontable en batch
+    if (result.length > 0) {
+        console.log("Aplicando cambios de una vez en la tabla...");
+        
+        hot.batch(() => {
+            hot.setDataAtCell(result);
+        });
+        
+        // Esperar a que el batch termine
+        await new Promise(resolve => {
+            hot.addHookOnce('afterChange', () => {
+                console.log("Cambios aplicados en la tabla.");
+                resolve();
+            });
+        });
+        
+        // Recargar la tabla para asegurar que todos los datos están bien sincronizados
+        hot.loadData(hot.getData());
+      
+
+        console.log("Tabla recargada.");
+    } else {
         console.log("No hay cambios para aplicar.");
-      }
-  
+    }
     } catch (error) {
       console.error('Error in pruebas function:', error);
     } finally {
 
-      
+     
+
     }
   };
   
@@ -192,6 +206,7 @@ grouped.forEach((pair, index) => {
         updateSharedState('proveedor', "")
       updateSharedState('descripcion', "NaN")
       updateSharedState('cantidadoc', 0)
+      updateSharedState('preciouni', 0);
       updateSharedState('pesopor', 0)
       updateSharedState('totalfactura', 0)
       updateSharedState('TRM', false)
@@ -205,6 +220,7 @@ grouped.forEach((pair, index) => {
         updateSharedState('proveedor', "")
       updateSharedState('descripcion', "NaN")
       updateSharedState('cantidadoc', 0)
+      updateSharedState('preciouni', 0);
       updateSharedState('pesopor', 0)
       updateSharedState('totalfactura', 0)
       updateSharedState('TRM', false)
@@ -384,7 +400,8 @@ grouped.forEach((pair, index) => {
   };
 
 
-
+  
+  
 
 
   function handleChange(value) {
@@ -713,7 +730,7 @@ grouped.forEach((pair, index) => {
           trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
           conver = selectedCurrency === "USD" ? "USD" : "EUR";
         } else {
-          trm = selectedCurrency === "USD" ? await getExchangeRate("trm_usd") : await getExchangeRate("trm_eur");
+          trm =  await getExchangeRate("trm_usd") ;
           conver = "COP";
         }
   
@@ -814,17 +831,17 @@ grouped.forEach((pair, index) => {
         }
       }
   
-      // Insertar nuevos registros
+  
       if (records.length > 0) {
         await insertSupplierData(records);
       }
   
-      // Actualizar registros existentes
+  
       if (update.length > 0) {
         await updateSupplierData(update);
       }
   
-      // Actualizar el estado de la factura
+     
       await updateInvoice({ invoice_id: id, state: "pending", feedback: "" });
       alert('Registros enviados correctamente.');
       setisTable(false);
@@ -868,9 +885,9 @@ grouped.forEach((pair, index) => {
     const matchedRecord = records
 
     if ((records.item !== 0 && records.item !== "" && records.item !== null && records.item !== undefined && records.item !== NaN) && (pos !== 0 && pos !== "" && pos !== undefined && pos !== NaN && pos !== null)) {
-      const { material_code, currency, description, supplier_id, total_quantity, approved_quantity, pending_quantity } = matchedRecord;
+      const { unit_price ,material_code, currency, description, supplier_id, total_quantity, approved_quantity, pending_quantity } = matchedRecord;
       if(parseFloat(approved_quantity) < parseFloat(total_quantity) ){
-        const unit_price = convertCommaToDot(data[coords.row]?.[3]?.toString().trim());
+
       const supplier = await getSupplier(supplier_id);
 
       updateSharedState('descripcion', description);
@@ -905,12 +922,14 @@ grouped.forEach((pair, index) => {
       }else{
         updateSharedState('descripcion', "NaN");
       updateSharedState('cantidadoc', 0);
+      updateSharedState('preciouni', 0);
       updateSharedState('facttotal', 0);
       updateSharedState('pesopor', 0);
       }
     } else {
       updateSharedState('descripcion', "NaN");
       updateSharedState('cantidadoc', 0);
+      updateSharedState('preciouni', 0);
       updateSharedState('facttotal', 0);
       updateSharedState('pesopor', 0);
     }
@@ -1056,8 +1075,8 @@ grouped.forEach((pair, index) => {
 
         if (subheading !== "**********") {
           const valida = await getMaterial(material_code);
-          if (valida.material_code) {
-            await updateMaterial({material_code: material_code, subheading: subheading });
+          if (valida.material_code !== undefined) {
+            //en caso de ya tener valor asignado
           } else {
             await insertMaterial({ material_code: material_code, subheading: subheading });
           }
@@ -1305,12 +1324,13 @@ grouped.forEach((pair, index) => {
     <VStack spacing={0} align="start" justify="start" width="30%" >
       <Text h="20%" className=" font-semibold" fontSize="70%">Descripcion:</Text>
       <Text h="20%" className=" font-semibold" fontSize="70%">Cantidad OC:</Text>
-
+      <Text h="20%" className=" font-semibold" fontSize="70%">Valor en Dolares</Text>
 
     </VStack>
     <VStack spacing={0} align="end" justify="end" width="70%"  >
       <Text h="20%" fontSize="70%">{sharedState.descripcion}</Text>
       <Text h="20%" fontSize="70%">{sharedState.cantidadoc}</Text>
+      <Text h="20%" fontSize="70%">{formatMoney(parseFloat(sharedState.preciouni/100))}</Text>
 
 
     </VStack>
@@ -1318,7 +1338,7 @@ grouped.forEach((pair, index) => {
   <VStack position="relative" spacing={0}>
 
     {!sharedState.TRM && (
-      <HStack mr="20px" top={4} height="30px" width="300px" position="absolute">
+      <HStack ml="40px" top={2} height="30px" width="300px" position="absolute">
         <Text fontSize="70%">TRM Factura</Text>
         <Input onClick={() => updateSharedState("TRMCOP", ) } isDisabled={!isActive} type="number" min="1" step="0.0000000001" value={(isTable !== "Create") ? sharedState.TRMCOP : undefined} onBlur={handleTRMCOP} h="25px" width="190px" bg="white"></Input>
       </HStack>
@@ -1644,12 +1664,21 @@ Moneda seleccionada:
         if (colIndex === 5) {
           if (newValue === '**********') {
             // Si la fila no está en el Set de filas con secuencia automática, no permitimos la edición
-            if(isTable === "Create"){
-              if (!rowsWithAutoSequence.has(rowIndex)) {
-                batchChanges.push([rowIndex, colIndex, oldValue]); // Revierte al valor anterior
-                continue;
-              }
-            }
+          
+              // Usamos setTimeout para retrasar la verificación
+setTimeout(() => {
+  // Verificamos si la fila no está en el conjunto después de un breve retraso
+  if (!rowsWithAutoSequence.has(rowIndex)) {
+      batchChanges.push([rowIndex, colIndex, oldValue]); // Revertimos al valor anterior
+      console.log("Valor revertido después de la verificación.");
+      
+  } else {
+      console.log("La fila tiene secuencia automática, no se revertirá el valor.");
+  }
+}, 100); // Retraso de 100 ms (puedes ajustarlo según lo necesites)
+
+              
+
           }
           try {
             const subheading = newValue;

@@ -21,6 +21,7 @@ import {
 } from '@chakra-ui/react';
 import { FaCloudArrowUp } from "react-icons/fa6";
 import { getMaterial, getRecords, getMaterials, getSuppliers, getSupplier, getRecord } from '@/app/_lib/database/service';
+import { selectByPurchaseOrder } from '../_lib/database/base_bills';
 import { AddIcon, EditIcon } from '@chakra-ui/icons';
 import { insertBills, selectBills } from '../_lib/database/base_bills';
 import { insertMaterial, selectMaterials, selectSingleMaterial, updateMaterial } from '../_lib/database/materials';
@@ -101,10 +102,31 @@ export const ImportDataBase = () => {
   const [iLargeScreen] = useMediaQuery("(min-width: 1024px)");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+  // Actualizamos el estado con el nuevo valor del input
+  setFormData((prevData) => ({
+    ...prevData,
+    [name]: value,
+  }));
+
+  // Si los inputs de Cantidad de Pedido y Precio Neto son números válidos, calculamos el resultado
+  if (name === 'input5' || name === 'input7') {
+    const cantidad = parseFloat(name === 'input5' ? value : formData.input5);
+    const precio = parseFloat(name === 'input7' ? value : formData.input7);
+
+    if (!isNaN(cantidad) && !isNaN(precio)) {
+      setFormData((prevData) => ({
+        ...prevData,
+        input8: (cantidad * precio).toFixed(2), // Calcula y actualiza el valor neto
+      }));
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        input8: '', // Borra el valor si no son números válidos
+      }));
+    }
+  }
   };
 
 
@@ -260,6 +282,19 @@ export const ImportDataBase = () => {
       return;
     }
 
+    if(selectedTable === "Materiales"){
+      if(formData.input2.length !== 10){
+        toast({
+          title: "Error",
+          description: "La subpartida debe tener 10 caracteres",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+    }
+
     setIsConfirming(true);
   };
 
@@ -273,6 +308,7 @@ export const ImportDataBase = () => {
       }else{
         const insert = await insertSupplier({name: inputValue})
         supplier = insert[0].supplier_id
+        
       }
       dataToSubmit = {
         purchase_order: formData.input1, // Orden de Compra
@@ -283,13 +319,13 @@ export const ImportDataBase = () => {
         pending_quantity: 0,     
         total_quantity: formData.input5,   // Cantidad de Pedido
         measurement_unit: formData.input6, // Unidad de Medida
-        unit_price: formData.input7,        // Precio Neto
-        net_price: formData.input8,   // Valor Neto de pedido
+        unit_price: (formData.input7*100),        // Precio Neto
+        net_price: (formData.input8*100),   // Valor Neto de pedido
         currency: formData.select1,       // Moneda
         supplier_id: supplier , // Proveedor: usar uno u otro
       };
       const data = await getRecord(dataToSubmit.purchase_order,dataToSubmit.item)
-      if(data){
+      if(data.base_bill_id !== undefined){
         toast({
           title: "Error",
           description: "Este Registro ya existe, intente con otro diferente",
@@ -310,7 +346,7 @@ export const ImportDataBase = () => {
         measurement_unit: formData.input3,    // Unidad de Medida
       };
       const data = await getMaterial(dataToSubmit.material_code)
-      if(data){
+      if(data.material_code !== undefined){
         toast({
           title: "Error",
           description: "Este Material ya existe, intente con otro diferente",
@@ -329,7 +365,21 @@ export const ImportDataBase = () => {
         domain: formData.inputOpcional || "",      // Dominio 
       };
 
-      await handleDatabaseInsert(insertSupplier, dataToSubmit, "Proveedores");
+      const data = await getSupplier("","",dataToSubmit.name)
+      if(data.name !== undefined){
+        toast({
+          title: "Error",
+          description: "Este Proveedor ya existe, intente con otro diferente",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return
+      }else{
+        await handleDatabaseInsert(insertSupplier, dataToSubmit, "Proveedores");
+      }
+
+      
     }
 
     setIsConfirming(false);
@@ -470,7 +520,7 @@ export const ImportDataBase = () => {
               <GridItem>
                 <FormControl isRequired>
                   <FormLabel>Valor Neto de pedido</FormLabel>
-                  <Input bgColor="white" name="input8" onChange={handleChange} />
+                  <Input bgColor="white" name="input8" value={formData.input8} readOnly />
                 </FormControl>
               </GridItem>
             </Grid>
@@ -654,8 +704,8 @@ export const ImportDataBase = () => {
     }
   };
 
-
-
+  const [groupedBillsArray1, IsgroupedBillsArray1] = useState([])
+  const [showModal, setShowModal] = useState(false); // Estado para controlar el modal
 
   const validateAndInsertData = async () => {
     setIsProcessing(true);
@@ -666,7 +716,9 @@ export const ImportDataBase = () => {
     let existingRecords = [];
     let existingMaterials = [];
     let existingSuppliers = [];
+    let invalidmaterials = []
     let invalidbills = []
+    let invalidsuppliers = []
     let cont1 = 0;
     let cont2 = 0;
 
@@ -727,7 +779,6 @@ export const ImportDataBase = () => {
             purchase_order: purchase_order,
             item: position
           })
-          console.log("Uno o más campos están vacíos.");
           completedTasks += 1;
           continue
         }
@@ -764,7 +815,7 @@ export const ImportDataBase = () => {
               net_price: parseInt(parseFloat((parseFloat(parseFloat(normalizeNumber(String(net_price))) * 100).toFixed(0)))),
             });
           } else {
-            invalidMaterialEntries.push(row);
+            
           }
         }
         completedTasks += 1;
@@ -779,6 +830,12 @@ export const ImportDataBase = () => {
        
         const [material_code, subheading, type, measurement_unit] = row;
         if(!material_code){
+          invalidmaterials.push({
+            material_code: "VACIO",
+            subheading: subheading,
+            types: (type  ? String(type) : "VACIO"),
+            measurement_unit: (measurement_unit ? measurement_unit : "VACIO")
+          })
           completedTasks += 1;
           continue;
         }
@@ -813,13 +870,21 @@ if (existindatamaterial) {
 
         const typeMapping = {
           "national": "national",
+          "NATIONAL": "national",
           "foreign": "foreign",
+          "FOREIGN": "foreign",
           "nationalized": "nationalized",
+          "NATIONALIZED": "nationalized",
           "other": "other",
+          "OTHER": "other",
           "NACIONAL": "national",
+          "nacional": "national",
           "EXTRANJERO": "foreign",
+          "extranjero": "foreign",
           "NACIONALIZADO": "nationalized",
+          "nacionalizado": "nationalized",
           "OTRO": "other",
+          "otro": "other",
         };
         
 
@@ -849,6 +914,17 @@ if (existindatamaterial) {
       } else if (selectedTable === "Proveedores") {
 
         const [domain, name] = row;
+        if(!name){
+          invalidsuppliers.push({
+            domain: (domain ? domain : "VACIO"),
+            name: "VACIO"
+          })
+        }
+        const exist = await getSupplier("","",name)
+        if(exist.name !== undefined){
+          //en el caso de repetirse
+        }
+
         suppliersToInsert.push({ domain, name });
         completedTasks += 1;
 
@@ -869,10 +945,10 @@ if (existindatamaterial) {
         return chunks;
       };
       
-      // Tamaño máximo por bloque
+   
       const MAX_BATCH_SIZE = 15000;
       
-      // Si el arreglo tiene más de 15000 registros, lo dividimos
+  
       const recordsChunks = chunkArray(recordsToInsert, MAX_BATCH_SIZE);
       
       for (const chunk of recordsChunks) {
@@ -894,15 +970,15 @@ if (existindatamaterial) {
         return chunks;
       };
       
-      // Tamaño máximo por bloque
+   
       const MAX_BATCH_SIZE = 15000;
       
-      // Si el arreglo tiene más de 15000 registros, lo dividimos
+
       const recordsChunks = chunkArray(materialsToInsert, MAX_BATCH_SIZE);
       
       for (const chunk of recordsChunks) {
         try {
-          // Insertar cada bloque de registros
+    
           await insertMaterial(chunk);
       
           console.log(`Se insertaron ${chunk.length} registros correctamente.`);
@@ -923,35 +999,41 @@ if (existindatamaterial) {
       toast({ title: 'Validation Errors', description: errorMessage, status: 'error', position: 'top', isClosable: true, duration: 10000 });
     }*/
 
-    if(invalidbills.length > 0){
-      const groupInvalidBills = (invalidbills) => {
-        return invalidbills.reduce((acc, bill) => {
-          const { purchase_order, item } = bill;
-          if (!acc[purchase_order]) {
-            acc[purchase_order] = [];
-          }
-          acc[purchase_order].push(item);
-          return acc;
-        }, {});
-      };
+      if (invalidbills.length > 0 || invalidmaterials.length > 0 || invalidsuppliers.length > 0) {
+        const groupInvalid = (invalid) => {
+          return invalid.reduce((acc, data) => {
+ 
+            if (invalidbills.length > 0) {
+              acc.push([data.purchase_order, data.item, "Bills"]);
+            }
+  
+            else if (invalidmaterials.length > 0) {
+              acc.push([data.material_code, data.subheading, data.type, data.measurement_unit, "Material"]);
+            }
 
-      const groupedBills = groupInvalidBills(invalidbills);
+            else if (invalidsuppliers.length > 0) {
+              acc.push([data.domain, data.name, "Suppliers"]);
+            }
+            return acc;
+          }, []);
+        };
+      
+ 
+        const groupedArray = groupInvalid(
+          invalidbills.length > 0 ? invalidbills :
+          invalidmaterials.length > 0 ? invalidmaterials :
+          invalidsuppliers
+        );
+      
 
-  // Crear el mensaje a mostrar en el toast
-  const description = Object.entries(groupedBills)
-    .map(([purchase_order, items]) => `${purchase_order}: ${items.join(', ')}`)
-    .join('\n');
+        IsgroupedBillsArray1(groupedArray);
+        setShowModal(true);
+      }
 
-  // Mostrar el toast
-  toast({
-    title: 'Los siguientes registros fallaron al ser insertados',
-    description: description,
-    status: 'error',
-    position: 'top',
-    isClosable: true,
-    duration: 10000
-  });
-    }
+     
+
+      
+      
 
     setIsProcessing(false);
     toast({ title: "Formulario enviado", description: `El formulario del ${selectedTable} se ha enviado correctamente.`, status: "success", duration: 3000, isClosable: true });
@@ -959,7 +1041,6 @@ if (existindatamaterial) {
 
 
  
-
 
  
 
@@ -999,8 +1080,8 @@ if (existindatamaterial) {
             record.description,
             record.total_quantity,
             record.measurement_unit,
-            record.unit_price,
-            record.net_price,
+            (record.unit_price/100),
+            (record.net_price/100),
             supplierMap[record.supplier_id] || '',
             record.currency
           ]);
@@ -1161,6 +1242,79 @@ const [Datafilter,setDatafilter] = useState()
             </>
           )}
         </HStack>
+        {showModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-300">
+    <div className="bg-white p-4 w-5/6 max-w-md border text-center border-gray-300 rounded-3xl shadow-md relative z-20">
+      <h2 className="text-xl font-bold mb-4">Solicitudes que fallaron</h2>
+      
+      {/* Mostrar el título dependiendo del tipo de datos */}
+      {groupedBillsArray1.length > 0 && groupedBillsArray1[0][2] === "Bills" && (
+        <>
+          <p className="font-bold mb-2">Registros</p>
+          <Box maxH="230px" overflowY="auto" p="2" border="1px solid #ddd" borderRadius="md">
+            <VStack spacing={3} align="stretch">
+              {groupedBillsArray1.map(([purchase_order, item], index) => (
+                <Box key={index} border="1px solid #ccc" borderRadius="md" padding="2" backgroundColor="gray.100">
+                  <HStack spacing={5}>
+                    <p><strong>OC:</strong> {purchase_order}</p>
+                    <p><strong>ITEM:</strong> {item}</p>
+                  </HStack>
+                </Box>
+              ))}
+            </VStack>
+          </Box>
+        </>
+      )}
+
+      {/* Mostrar el título y registros para "Material" */}
+      {groupedBillsArray1.length > 0 && groupedBillsArray1[0][4] === "Material" && (
+        <>
+          <p className="font-bold mb-2">Materiales</p>
+          <Box maxH="230px" overflowY="auto" p="2" border="1px solid #ddd" borderRadius="md">
+            <VStack spacing={3} align="stretch">
+              {groupedBillsArray1.map(([material_code, subheading, type, measurement_unit], index) => (
+                <Box key={index} border="1px solid #ccc" borderRadius="md" padding="2" backgroundColor="gray.100">
+                  <HStack spacing={5}>
+                    <p><strong>CODIGO:</strong> {material_code}</p>
+                    <p><strong>PA:</strong> {subheading}</p>
+                    <p><strong>TIPO:</strong> {type}</p>
+                    <p><strong>UC:</strong> {measurement_unit}</p>
+                  </HStack>
+                </Box>
+              ))}
+            </VStack>
+          </Box>
+        </>
+      )}
+
+      {/* Mostrar el título y registros para "Suppliers" */}
+      {groupedBillsArray1.length > 0 && groupedBillsArray1[0][2] === "Suppliers" && (
+        <>
+          <p className="font-bold mb-2">Proveedores</p>
+          <Box maxH="230px" overflowY="auto" p="2" border="1px solid #ddd" borderRadius="md">
+            <VStack spacing={3} align="stretch">
+              {groupedBillsArray1.map(([domain, name], index) => (
+                <Box key={index} border="1px solid #ccc" borderRadius="md" padding="2" backgroundColor="gray.100">
+                  <HStack spacing={5}>
+                    <p><strong>Dominio:</strong> {domain}</p>
+                    <p><strong>Proveedor:</strong> {name}</p>
+                  </HStack>
+                </Box>
+              ))}
+            </VStack>
+          </Box>
+        </>
+      )}
+
+      <p className="mt-4 font-bold">Registros fallidos: {groupedBillsArray1.length}</p>
+      <HStack mt={4} justify="center" align="center" spacing={4}>
+        <Button onClick={() => setShowModal(false)} textColor="black" bgColor="#F1D803" colorScheme="teal" className="px-4 py-2 rounded">
+          Aceptar
+        </Button>
+      </HStack>
+    </div>
+  </div>
+)}
         <Modal isOpen={isOpen2} onClose={onClose2}>
       <ModalOverlay />
       <ModalContent bgColor="gray.200">

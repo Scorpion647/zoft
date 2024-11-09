@@ -23,14 +23,10 @@ export default function GuestPage() {
             <Image
               src="/grupo-ecopetrol.png"
               alt="Descripción de la imagen"
-              w="160px"
-              h="70px"
+              w="260px"
+              h="80px"
             />
-            <HStack className="bg-black w-1 h-16"></HStack>
-            <VStack spacing={0} align="start" textAlign="start">
-              <Text className="text-black">REFINERIA</Text>
-              <Text className="text-black">DE CARTAGENA</Text>
-            </VStack>
+            
           </HStack>
         </HStack>
 
@@ -38,54 +34,25 @@ export default function GuestPage() {
 
         <VStack justify="center" h="40%" align="center">
           <Text className="font-semibold text-start" fontSize="90%">
-            Hola Usuario
+            Hola Estimado Usuario
           </Text>
-          <Text fontSize="80%">
+          <Text fontSize="90%">
             Por favor espera a que el administrador valide tu información para acceder.
           </Text>
         </VStack>
 
-        <VStack className="mt-5 lg:mt-0 sm:mt-3" justify="center" h="20%">
-          <Text fontSize="80%">
-            Informe al administrador de su registro si aun no lo ha hecho para identificarse
+        <VStack className="mt-5 lg:mt-0 sm:mt-3" textAlign="center" justify="center" h="20%">
+          <Text className=" font-semibold" fontSize="80%">
+            Comuniquese con el administrados para que valide su identidad.
           </Text>
-          <Text
-            textColor="blue"
-            className="font-bold text-center underline underline-offset-4 decoration-blue-700 cursor-pointer"
-            fontSize="80%"
-            
-          >
-            ¿como identificarse?
-          </Text>
+          
         </VStack>
 
         <VStack h="10%"></VStack>
       </Box>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div
-          className="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
-          
-        >
-          <div className="bg-white rounded-lg p-4 max-w-md w-full relative">
-            <h2 className="text-lg font-bold mb-4">¿Cómo identificarse?</h2>
-            <p className=" mt-1">Para identificarse como proveedor nuevo o miembro de uno existente porfavor mandar la siguiente informacion:</p>
-            <p className=" mt-3 font-bold">*</p>
-            <p className="  font-bold">*</p>
-            <p className=" font-bold">*</p>
-            <p className=" mt-2">Enviar todo al siguiente correo electronico y esperar a confirmacion</p>
-            <p  className=" mt-2 text-center font-bold">********@gmail.com</p>
-            <button
-              onClick={handleCloseModal} // Cerrar modal al hacer clic en el botón
-              
-              className="mt-4 bg-red-600 text-white py-2 px-4 rounded"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
+    
+      
     </div>
   );
 }

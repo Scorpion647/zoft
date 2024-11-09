@@ -153,7 +153,7 @@ export const CreatelargeAdmin: React.FC<CreatelargeAdminProps> = ({ sharedState,
     setIsLoading(true);
     interface InvoiceData {
       consecutivo: string;
-      orden: string | undefined; // Usa 'string | undefined' si puede ser 'undefined' en caso de error
+      orden: string | undefined; 
       fecha: string;
       estado: "pending" | "approved" | "rejected";
     }
@@ -176,25 +176,25 @@ export const CreatelargeAdmin: React.FC<CreatelargeAdminProps> = ({ sharedState,
           ascending: boolean;
         };
       };
-      equals: EqualsType; // Cambiar a no opcional
+      equals: EqualsType; 
     };
     
-    let filter: FilterType = { limit: 7, equals: {} }; // Inicia con equals como un objeto vacío
+    let filter: FilterType = { limit: 7, equals: {} }; 
     
     try {
       const role = await getRole();
       setRole(role || "");
       if(selectedStatus !== "all"){
         if(!inputValue || inputValue === ""){
-          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: false}}, equals: {state: (selectedStatus === "approved" ? "approved" : (selectedStatus === "pending" ? "pending": "rejected"))} }
+          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: (role === "administrator" ? true : false)}}, equals: {state: (selectedStatus === "approved" ? "approved" : (selectedStatus === "pending" ? "pending": "rejected"))} }
         }else{
-          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: false}}, equals: {invoice_id: inputValue,state: (selectedStatus === "approved" ? "approved" : (selectedStatus === "pending" ? "pending": "rejected"))} }
+          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: (role === "administrator" ? true : false)}}, equals: {invoice_id: inputValue,state: (selectedStatus === "approved" ? "approved" : (selectedStatus === "pending" ? "pending": "rejected"))} }
         }
       }else{
         if(!inputValue || inputValue === ""){
-          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: false}},equals: {} }
+          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: (role === "administrator" ? true : false)}},equals: {} }
         }else{
-          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: false}}, equals: {invoice_id: inputValue} }
+          filter = { page: 1, limit: 7, orderBy: {column: "updated_at", options: {ascending: (role === "administrator" ? true : false)}}, equals: {invoice_id: inputValue} }
         }
         
       }
